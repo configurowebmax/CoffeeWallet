@@ -134,6 +134,7 @@ input:focus, select:focus, textarea:focus {
 </head>
 <body>
 
+
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);">
   <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-up">
@@ -236,6 +237,7 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 <script>
+
 // ═══════════════════════════════════════════
 // UTILITIES
 // ═══════════════════════════════════════════
@@ -567,6 +569,7 @@ function renderDashboard(el) {
   const expenses = DB.get('expenses');
   const products = DB.get('products');
   const compositions = DB.get('compositions');
+  const clients = DB.get('clients');
   const t = today();
   const totalBalance = wallets.reduce((s, w) => s + w.balance, 0);
   const todaySales = sales.filter(s => s.date.startsWith(t)).reduce((sum, s) => sum + s.total, 0);
@@ -575,6 +578,26 @@ function renderDashboard(el) {
   const todayProfit = todaySales - todayCosts;
 
   const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold);
+
+  // Inactive clients (>15 days)
+  const clientStats = {};
+  clients.forEach(c => { clientStats[c.id] = { totalPurchases: 0, lastPurchase: null }; });
+  sales.forEach(s => {
+    if (s.clientId && clientStats[s.clientId]) {
+      clientStats[s.clientId].totalPurchases++;
+      if (!clientStats[s.clientId].lastPurchase || s.date > clientStats[s.clientId].lastPurchase) {
+        clientStats[s.clientId].lastPurchase = s.date;
+      }
+    }
+  });
+  const inactiveDaysThreshold = getInactiveAlertDays();
+  const inactiveCutoff = new Date();
+  inactiveCutoff.setDate(inactiveCutoff.getDate() - inactiveDaysThreshold);
+  const inactiveClients = clients.filter(c => {
+    const stats = clientStats[c.id];
+    if (!stats || stats.totalPurchases === 0 || !stats.lastPurchase) return false;
+    return new Date(stats.lastPurchase) < inactiveCutoff;
+  }).slice(0, 5); // Show max 5 on dashboard
 
   // Recent transactions
   const allTx = [
@@ -665,6 +688,33 @@ function renderDashboard(el) {
                     <p class="text-sm font-bold text-red-600">${p.stock}</p>
                     <p class="text-xs text-muted">mín: ${p.lowStockThreshold}</p>
                   </div>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+
+        <!-- Inactive Clients Alert -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-heading font-semibold text-gray-900"><i class="fa-solid fa-bell text-orange-500 mr-2"></i>Clientes Inactivos</h3>
+            ${inactiveClients.length > 0 ? '<button onclick="currentPage=\'clients\';buildNav();renderPage();updateHeader()" class="text-xs text-accent hover:text-accent-dark font-medium">Ver todos</button>' : ''}
+          </div>
+          <div class="max-h-64 overflow-y-auto space-y-2">
+            ${inactiveClients.length === 0 ? '<p class="text-sm text-muted text-center py-4"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i>Todos los clientes están activos</p>' :
+              inactiveClients.map(c => {
+                const stats = clientStats[c.id];
+                const lastDate = stats.lastPurchase ? new Date(stats.lastPurchase) : null;
+                const daysSince = lastDate ? Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24)) : '—';
+                const initials = c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                const colors = ['bg-amber-100 text-amber-700', 'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-purple-100 text-purple-700'];
+                const colorClass = colors[c.name.charCodeAt(0) % colors.length];
+                return `<div class="flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-100">
+                  <div class="w-8 h-8 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold flex-shrink-0">${initials}</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">${c.name}</p>
+                    <p class="text-xs text-orange-600">+${daysSince} días sin compra</p>
+                  </div>
+                  ${c.phone ? `<button onclick="contactInactiveClient('${c.id}', ${daysSince})" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-white hover:opacity-90 flex-shrink-0" style="background:#25D366;" title="Contactar por WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
                 </div>`;
               }).join('')}
           </div>
@@ -1560,7 +1610,7 @@ function renderNewSale(el) {
             </div>
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fa-solid fa-user text-muted mr-1"></i>Cliente</label>
-              <select id="saleClientSelect" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+              <select id="saleClientSelect" onchange="saleClientId=this.value;renderPage()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
                 <option value="">Cliente General (sin registrar)</option>
                 ${DB.get('clients').map(c => `<option value="${c.id}" ${saleClientId === c.id ? 'selected' : ''}>${c.name} ${c.doc ? '(' + c.doc + ')' : ''}</option>`).join('')}
               </select>
@@ -1575,14 +1625,30 @@ function renderNewSale(el) {
             </div>
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Billetera destino</label>
-              <select id="saleWallet" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+              <select id="saleWallet" onchange="saleWallet=this.value;renderPage()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
                 <option value="">Seleccionar...</option>
                 ${wallets.map(w => `<option value="${w.id}" ${saleWallet === w.id ? 'selected' : ''}>${w.name} (${fmtCur(w.balance)})</option>`).join('')}
               </select>
             </div>
-            <button onclick="completeSale()" class="btn w-full justify-center py-3 text-sm ${saleCart.length === 0 || !$('#saleWallet')?.value ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}" ${saleCart.length === 0 ? 'disabled' : ''}>
-              <i class="fa-solid fa-check-circle"></i> Completar Venta
-            </button>
+            <div class="space-y-2">
+              <button onclick="completeSale()" class="btn w-full justify-center py-3 text-sm ${saleCart.length === 0 || !saleWallet ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}" ${saleCart.length === 0 || !saleWallet ? 'disabled' : ''}>
+                <i class="fa-solid fa-check-circle"></i> Completar Venta
+              </button>
+              ${(() => {
+                const cl = saleClientId ? DB.get('clients').find(c => c.id === saleClientId) : null;
+                const hasPhone = cl && cl.phone;
+                if (!hasPhone) return '';
+                return `<button onclick="completeSaleAndWhatsApp()" class="btn w-full justify-center py-3 text-sm ${saleCart.length === 0 || !saleWallet ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'text-white hover:opacity-90'}" style="${saleCart.length > 0 && saleWallet ? 'background:#25D366;' : ''}" ${saleCart.length === 0 || !saleWallet ? 'disabled' : ''}>
+                  <i class="fa-brands fa-whatsapp"></i> Vender y Enviar por WhatsApp
+                </button>`;
+              })()}
+              ${(() => {
+                const cl = saleClientId ? DB.get('clients').find(c => c.id === saleClientId) : null;
+                const hasPhone = cl && cl.phone;
+                if (!hasPhone) return '<p class="text-xs text-muted text-center">Selecciona un cliente con telefono para habilitar WhatsApp</p>';
+                return `<p class="text-xs text-green-600 text-center"><i class="fa-brands fa-whatsapp"></i> Cliente: ${cl.name} (${cl.phone})</p>`;
+              })()}
+            </div>
           </div>
         </div>
       </div>
@@ -1682,9 +1748,9 @@ function completeSale() {
   const saleNumber = 'V-' + saleCounter.toString().padStart(5, '0');
 
   // Get client info
-  const saleClientId = $('#saleClientSelect') ? $('#saleClientSelect').value : '';
+  const selectedClientId = $('#saleClientSelect') ? $('#saleClientSelect').value : '';
   const clients = DB.get('clients');
-  const selectedClient = saleClientId ? clients.find(c => c.id === saleClientId) : null;
+  const selectedClient = selectedClientId ? clients.find(c => c.id === selectedClientId) : null;
   const customerName = selectedClient ? selectedClient.name : (saleCustomerName.trim() || 'Cliente General');
   const customerDoc = selectedClient ? selectedClient.doc : (saleCustomerDoc.trim() || '');
 
@@ -1694,9 +1760,10 @@ function completeSale() {
   sales.push({
     id: saleId,
     saleNumber,
-    clientId: saleClientId || null,
+    clientId: selectedClientId || null,
     customerName,
     customerDoc,
+    clientPhone: selectedClient ? (selectedClient.phone || null) : null,
     invoiceNumber: null,
     items: saleCart.map(i => ({ productId: i.productId, productName: i.productName, productSku: i.productSku, costPrice: i.costPrice, sellingPrice: i.sellingPrice, qty: i.qty })),
     total, totalCost, walletId, date: now()
@@ -1711,19 +1778,169 @@ function completeSale() {
   saleCustomerDoc = '';
   saleClientId = '';
 
-  // Show success modal with invoice option
+  // Check if client has phone for WhatsApp
+  const hasClientPhone = !!(selectedClientId && selectedClient && selectedClient.phone);
+
+  // Show success modal with invoice and WhatsApp options
   openModal(`
     <div class="p-6 text-center">
       <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-circle-check text-3xl text-emerald-500"></i></div>
       <h3 class="font-heading font-semibold text-lg mb-2">Venta Exitosa</h3>
       <p class="text-sm text-muted mb-1">Total: <strong>${fmtCur(total)}</strong></p>
-      <p class="text-sm text-muted mb-6">Ganancia: <strong class="text-emerald-600">${fmtCur(total - totalCost)}</strong></p>
+      <p class="text-sm text-muted mb-1">Ganancia: <strong class="text-emerald-600">${fmtCur(total - totalCost)}</strong></p>
+      ${customerName !== 'Cliente General' ? `<p class="text-sm text-muted mb-4">Cliente: <strong>${customerName}</strong></p>` : '<p class="text-sm text-muted mb-4">&nbsp;</p>'}
       <div class="space-y-2">
         <button onclick="closeModal();generateInvoice('${saleId}')" class="btn w-full justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark"><i class="fa-solid fa-file-invoice"></i> Generar Factura</button>
+        ${hasClientPhone ? `<button onclick="closeModal();sendInvoiceWhatsApp('${saleId}')" class="btn w-full justify-center py-2.5 text-sm text-white hover:opacity-90" style="background:#25D366;"><i class="fa-brands fa-whatsapp"></i> Enviar Factura por WhatsApp</button>` : ''}
         <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
       </div>
     </div>`, 'max-w-sm');
 
+  renderPage(); updateBalance();
+}
+
+// ═══════════════════════════════════════════
+// COMPLETE SALE AND SEND VIA WHATSAPP
+// ═══════════════════════════════════════════
+async function completeSaleAndWhatsApp() {
+  if (saleCart.length === 0) { showToast('El carrito esta vacio', 'warning'); return; }
+  if (!saleWallet) { showToast('Selecciona una billetera destino', 'warning'); return; }
+
+  const selectedClientId = saleClientId;
+  const clients = DB.get('clients');
+  const selectedClient = selectedClientId ? clients.find(c => c.id === selectedClientId) : null;
+
+  if (!selectedClient || !selectedClient.phone) {
+    showToast('El cliente seleccionado no tiene telefono registrado', 'warning');
+    return;
+  }
+
+  const phone = formatPhoneWA(selectedClient.phone);
+  if (!phone) {
+    showToast('Formato de telefono invalido: ' + selectedClient.phone, 'warning');
+    return;
+  }
+
+  // We need to perform the sale first, then send WhatsApp
+  // Temporarily store flag to trigger WhatsApp after sale completes
+  window._pendingWhatsAppSale = true;
+
+  // We replicate the sale logic inline since completeSale shows a modal
+  const walletId = saleWallet;
+  const products = DB.get('products');
+  const comps = DB.get('compositions');
+  const wallets = DB.get('wallets');
+  const wallet = wallets.find(w => w.id === walletId);
+  const total = saleCart.reduce((s, i) => s + i.sellingPrice * i.qty, 0);
+  const totalCost = saleCart.reduce((s, i) => s + i.costPrice * i.qty, 0);
+
+  // Validate stock
+  const errors = [];
+  for (const item of saleCart) {
+    const product = products.find(p => p.id === item.productId);
+    if (!product) continue;
+    if (product.stock < item.qty) {
+      errors.push(`Stock insuficiente de "${product.name}". Requerido: ${item.qty}, Disponible: ${product.stock}`);
+      continue;
+    }
+    const itemComps = comps.filter(c => c.parentId === item.productId);
+    for (const comp of itemComps) {
+      const compProduct = products.find(p => p.id === comp.componentId);
+      if (!compProduct) continue;
+      const needed = comp.quantity * item.qty;
+      if (compProduct.stock < needed) {
+        errors.push(`No hay suficiente stock de "${compProduct.name}" (insumo). Requerido: ${needed}, Disponible: ${compProduct.stock}`);
+      }
+    }
+  }
+  if (errors.length > 0) {
+    window._pendingWhatsAppSale = false;
+    openModal(`
+      <div class="p-6">
+        <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation text-2xl text-red-500"></i></div>
+        <h3 class="font-heading font-semibold text-lg mb-3 text-center">Error de Stock</h3>
+        <div class="space-y-2 max-h-60 overflow-y-auto mb-4">
+          ${errors.map(e => `<p class="text-sm text-red-700 bg-red-50 p-3 rounded-lg">${e}</p>`).join('')}
+        </div>
+        <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Entendido</button>
+      </div>`);
+    return;
+  }
+
+  // Process sale
+  wallet.balance += total;
+  DB.set('wallets', wallets);
+
+  for (const item of saleCart) {
+    const product = products.find(p => p.id === item.productId);
+    if (product) product.stock -= item.qty;
+    const itemComps = comps.filter(c => c.parentId === item.productId);
+    for (const comp of itemComps) {
+      const compProduct = products.find(p => p.id === comp.componentId);
+      if (compProduct) compProduct.stock -= comp.quantity * item.qty;
+    }
+  }
+  DB.set('products', products);
+
+  let saleCounter = parseInt(localStorage.getItem('sw_saleCounter')) || 0;
+  saleCounter++;
+  localStorage.setItem('sw_saleCounter', saleCounter.toString());
+  const saleNumber = 'V-' + saleCounter.toString().padStart(5, '0');
+
+  const customerName = selectedClient ? selectedClient.name : (saleCustomerName.trim() || 'Cliente General');
+  const customerDoc = selectedClient ? selectedClient.doc : (saleCustomerDoc.trim() || '');
+
+  // Generate invoice number automatically for WhatsApp
+  const invoiceNumber = getNextInvoiceNumber();
+
+  const sales = DB.get('sales');
+  const saleId = genId();
+  sales.push({
+    id: saleId,
+    saleNumber,
+    clientId: selectedClientId || null,
+    customerName,
+    customerDoc,
+    clientPhone: selectedClient.phone || null,
+    invoiceNumber,
+    items: saleCart.map(i => ({ productId: i.productId, productName: i.productName, productSku: i.productSku, costPrice: i.costPrice, sellingPrice: i.sellingPrice, qty: i.qty })),
+    total, totalCost, walletId, date: now()
+  });
+  DB.set('sales', sales);
+
+  lastCompletedSaleId = saleId;
+  showToast(`Venta completada: ${fmtCur(total)} · Enviando por WhatsApp...`);
+
+  // Clear cart
+  const savedClientId = saleClientId;
+  saleCart = [];
+  saleWallet = '';
+  saleCustomerName = '';
+  saleCustomerDoc = '';
+  saleClientId = '';
+
+  // Show success and send WhatsApp
+  openModal(`
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-circle-check text-3xl text-emerald-500"></i></div>
+      <h3 class="font-heading font-semibold text-lg mb-2">Venta Exitosa</h3>
+      <p class="text-sm text-muted mb-1">Total: <strong>${fmtCur(total)}</strong></p>
+      <p class="text-sm text-muted mb-1">Ganancia: <strong class="text-emerald-600">${fmtCur(total - totalCost)}</strong></p>
+      <p class="text-sm text-muted mb-1">Factura: <strong>#${invoiceNumber}</strong></p>
+      <p class="text-sm text-muted mb-4">Cliente: <strong>${customerName}</strong></p>
+      <div class="space-y-2">
+        <button onclick="closeModal();sendInvoiceWhatsApp('${saleId}')" class="btn w-full justify-center py-2.5 text-sm text-white hover:opacity-90" style="background:#25D366;"><i class="fa-brands fa-whatsapp"></i> Enviar Factura por WhatsApp</button>
+        <button onclick="closeModal();generateInvoice('${saleId}')" class="btn w-full justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark"><i class="fa-solid fa-print"></i> Imprimir Factura</button>
+        <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+      </div>
+    </div>`, 'max-w-sm');
+
+  // Auto-send WhatsApp after a brief moment
+  setTimeout(() => {
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(buildInvoiceText(DB.get('sales').find(s => s.id === saleId)))}`, '_blank');
+  }, 500);
+
+  window._pendingWhatsAppSale = false;
   renderPage(); updateBalance();
 }
 
@@ -1909,6 +2126,7 @@ function showTxDetail(type, id) {
       </div>
       <div class="flex gap-2 mt-4">
         <button onclick="closeModal();generateInvoice('${sale.id}')" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark"><i class="fa-solid fa-file-invoice"></i> ${sale.invoiceNumber ? 'Ver Factura' : 'Generar Factura'}</button>
+        ${getClientPhoneForSale(sale) ? `<button onclick="closeModal();sendInvoiceWhatsApp('${sale.id}')" class="btn flex-1 justify-center py-2.5 text-sm text-white hover:opacity-90" style="background:#25D366;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>` : ''}
         <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
       </div>
     </div>`;
@@ -1948,7 +2166,14 @@ function showTxDetail(type, id) {
 // INVOICE SYSTEM
 // ═══════════════════════════════════════════
 function getBusinessSettings() {
-  try { return JSON.parse(localStorage.getItem('sw_businessSettings')) || { name: 'CoffeeWallet', nit: '', address: '', phone: '', email: '', resolution: '' }; } catch { return { name: 'CoffeeWallet', nit: '', address: '', phone: '', email: '', resolution: '' }; }
+  try {
+    const s = JSON.parse(localStorage.getItem('sw_businessSettings')) || {};
+    return { name: 'CoffeeWallet', nit: '', address: '', phone: '', email: '', resolution: '', inactiveAlertDays: 15, ...s };
+  } catch { return { name: 'CoffeeWallet', nit: '', address: '', phone: '', email: '', resolution: '', inactiveAlertDays: 15 }; }
+}
+
+function getInactiveAlertDays() {
+  return getBusinessSettings().inactiveAlertDays || 15;
 }
 
 function getNextInvoiceNumber() {
@@ -1956,6 +2181,131 @@ function getNextInvoiceNumber() {
   counter++;
   localStorage.setItem('sw_invoiceCounter', counter.toString());
   return counter.toString().padStart(6, '0');
+}
+
+// ═══════════════════════════════════════════
+// WHATSAPP INTEGRATION
+// ═══════════════════════════════════════════
+function formatPhoneWA(phone) {
+  if (!phone) return null;
+  let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+  // Remove leading 57 if already has country code
+  if (cleaned.startsWith('+57')) cleaned = cleaned.substring(3);
+  else if (cleaned.startsWith('0057')) cleaned = cleaned.substring(4);
+  else if (cleaned.startsWith('57') && cleaned.length === 12) cleaned = cleaned.substring(2);
+  // Ensure starts with country code for Colombia
+  if (cleaned.length === 10 && cleaned.startsWith('3')) return '57' + cleaned;
+  if (cleaned.length === 12 && cleaned.startsWith('57')) return cleaned;
+  return null; // Invalid phone format
+}
+
+function buildInvoiceText(sale) {
+  const biz = getBusinessSettings();
+  const items = sale.items || [];
+  const itemsText = items.map((item, idx) =>
+    `${idx + 1}. ${item.productName} x${item.qty} — ${fmtCur(item.sellingPrice * item.qty)}`
+  ).join('\n');
+
+  let text = `🧾 *FACTURA #${sale.invoiceNumber || 'S/N'}*\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `🏪 *${biz.name || 'CoffeeWallet'}*\n`;
+  if (biz.nit) text += `NIT: ${biz.nit}\n`;
+  if (biz.address) text += `📍 ${biz.address}\n`;
+  if (biz.phone) text += `📞 ${biz.phone}\n`;
+  if (biz.resolution) text += `📄 Resolución: ${biz.resolution}\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+  if (sale.saleNumber) text += `🔢 Venta: ${sale.saleNumber}\n`;
+  const saleDate = new Date(sale.date);
+  text += `📅 Fecha: ${saleDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}\n`;
+  text += `🕐 Hora: ${saleDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}\n\n`;
+  text += `👤 *Cliente:* ${sale.customerName || 'Cliente General'}\n`;
+  if (sale.customerDoc) text += `🪪 Doc: ${sale.customerDoc}\n`;
+  text += `\n📦 *DETALLE:*\n${itemsText}\n\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `💰 *TOTAL: ${fmtCur(sale.total)}*\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+  text += `✅ ¡Gracias por su compra!\n`;
+  return text;
+}
+
+function getClientPhoneForSale(sale) {
+  if (sale.clientId) {
+    const client = DB.get('clients').find(c => c.id === sale.clientId);
+    if (client && client.phone) return client.phone;
+  }
+  // Fallback: check if there's a phone saved in the sale record
+  return sale.clientPhone || null;
+}
+
+function sendInvoiceWhatsApp(saleId) {
+  const sale = DB.get('sales').find(s => s.id === saleId);
+  if (!sale) { showToast('Venta no encontrada', 'error'); return; }
+
+  // Ensure invoice number exists
+  if (!sale.invoiceNumber) {
+    sale.invoiceNumber = getNextInvoiceNumber();
+    const sales = DB.get('sales');
+    const idx = sales.findIndex(s => s.id === saleId);
+    if (idx >= 0) { sales[idx] = sale; DB.set('sales', sales); }
+  }
+
+  const phone = getClientPhoneForSale(sale);
+  if (!phone) {
+    showToast('El cliente no tiene teléfono registrado', 'warning');
+    return;
+  }
+
+  const formatted = formatPhoneWA(phone);
+  if (!formatted) {
+    showToast('Formato de teléfono inválido: ' + phone, 'warning');
+    return;
+  }
+
+  const text = buildInvoiceText(sale);
+  const url = `https://wa.me/${formatted}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+  showToast('Abriendo WhatsApp...', 'success');
+}
+
+function sendClientWhatsApp(clientId, customMessage) {
+  const client = DB.get('clients').find(c => c.id === clientId);
+  if (!client) { showToast('Cliente no encontrado', 'error'); return; }
+  if (!client.phone) { showToast('El cliente no tiene teléfono registrado', 'warning'); return; }
+
+  const formatted = formatPhoneWA(client.phone);
+  if (!formatted) { showToast('Formato de teléfono inválido', 'warning'); return; }
+
+  const message = customMessage || `Hola ${client.name}, le contactamos de ${getBusinessSettings().name || 'CoffeeWallet'}. 🙌`;
+  const url = `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+  showToast('Abriendo WhatsApp...', 'success');
+}
+
+function sendClientInvoiceWhatsApp(clientId) {
+  // Find the last sale for this client with an invoice
+  const sales = DB.get('sales').filter(s => s.clientId === clientId && s.invoiceNumber);
+  if (sales.length === 0) { showToast('Este cliente no tiene facturas generadas', 'warning'); return; }
+  // Get the most recent invoice
+  sales.sort((a, b) => b.date.localeCompare(a.date));
+  sendInvoiceWhatsApp(sales[0].id);
+}
+
+function contactInactiveClient(clientId, daysSince) {
+  const client = DB.get('clients').find(c => c.id === clientId);
+  if (!client || !client.phone) { showToast('Cliente no tiene teléfono', 'warning'); return; }
+
+  const formatted = formatPhoneWA(client.phone);
+  if (!formatted) { showToast('Formato de teléfono inválido', 'warning'); return; }
+
+  const biz = getBusinessSettings();
+  const message = `Hola ${client.name}, le escribe ${biz.name || 'CoffeeWallet'}. ☕\n\n` +
+    `Notamos que hace ${daysSince} días no realiza una compra con nosotros y queríamos saber cómo está. 🤗\n\n` +
+    `Le recordamos que tenemos productos frescos de café listos para usted. Si desea hacer un pedido o conocer nuestras novedades, estamos a su disposición.\n\n` +
+    `¡Esperamos volver a verle pronto! 🙌`;
+
+  const url = `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+  showToast('Abriendo WhatsApp...', 'success');
 }
 
 function generateInvoice(saleId) {
@@ -2166,6 +2516,7 @@ function renderInvoices(el) {
                     <td class="px-4 py-3">
                       <div class="flex gap-1">
                         <button onclick="generateInvoice('${s.id}')" class="btn bg-accent text-white px-3 py-1.5 text-xs hover:bg-accent-dark"><i class="fa-solid fa-print"></i> Imprimir</button>
+                        ${getClientPhoneForSale(s) ? `<button onclick="sendInvoiceWhatsApp('${s.id}')" class="btn text-white px-3 py-1.5 text-xs hover:opacity-90" style="background:#25D366;" title="Enviar por WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
                         <button onclick="showTxDetail('sale','${s.id}')" class="btn bg-gray-50 text-gray-700 px-3 py-1.5 text-xs hover:bg-gray-100"><i class="fa-solid fa-eye"></i></button>
                       </div>
                     </td>
@@ -2200,6 +2551,20 @@ function renderClients(el) {
         clientStats[s.clientId].lastPurchase = s.date;
       }
     }
+  });
+
+  // Find inactive clients (configurable threshold, must have at least 1 purchase)
+  const inactiveDaysThreshold = getInactiveAlertDays();
+  const inactiveCutoff = new Date();
+  inactiveCutoff.setDate(inactiveCutoff.getDate() - inactiveDaysThreshold);
+  const inactiveClients = clients.filter(c => {
+    const stats = clientStats[c.id];
+    if (!stats || stats.totalPurchases === 0 || !stats.lastPurchase) return false;
+    return new Date(stats.lastPurchase) < inactiveCutoff;
+  }).sort((a, b) => {
+    const dateA = clientStats[a.id]?.lastPurchase || '';
+    const dateB = clientStats[b.id]?.lastPurchase || '';
+    return dateA.localeCompare(dateB);
   });
 
   const totalClients = clients.length;
@@ -2256,22 +2621,26 @@ function renderClients(el) {
               <th class="px-4 py-3 font-medium">Documento</th>
               <th class="px-4 py-3 font-medium hidden sm:table-cell">Teléfono</th>
               <th class="px-4 py-3 font-medium hidden md:table-cell">Compras</th>
-              <th class="px-4 py-3 font-medium hidden md:table-cell">Total Gastado</th>
+              <th class="px-4 py-3 font-medium hidden lg:table-cell">Gastado</th>
+              <th class="px-4 py-3 font-medium hidden lg:table-cell">Sin Comprar</th>
               <th class="px-4 py-3 font-medium">Acciones</th>
             </tr></thead>
             <tbody>
-              ${filtered.length === 0 ? `<tr><td colspan="6" class="px-4 py-8 text-center text-muted">Sin clientes registrados</td></tr>` :
+              ${filtered.length === 0 ? `<tr><td colspan="7" class="px-4 py-8 text-center text-muted">Sin clientes registrados</td></tr>` :
                 filtered.map(c => {
                   const stats = clientStats[c.id] || { totalPurchases: 0, totalSpent: 0, lastPurchase: null };
                   const initials = c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
                   const colors = ['bg-amber-100 text-amber-700', 'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700'];
                   const colorClass = colors[c.name.charCodeAt(0) % colors.length];
-                  return `<tr class="border-t border-gray-50 hover:bg-gray-50">
+                  const isInactive = inactiveClients.some(ic => ic.id === c.id);
+                  const lastDate = stats.lastPurchase ? new Date(stats.lastPurchase) : null;
+                  const daysSince = lastDate ? Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24)) : null;
+                  return `<tr class="border-t border-gray-50 hover:bg-gray-50 ${isInactive ? 'bg-orange-50/40' : ''}">
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold flex-shrink-0">${initials}</div>
                         <div class="min-w-0">
-                          <p class="font-medium text-gray-900 truncate">${c.name}</p>
+                          <p class="font-medium text-gray-900 truncate">${c.name} ${isInactive ? '<span class="inline-block w-2 h-2 rounded-full bg-orange-400 ml-1" title="Sin compra reciente"></span>' : ''}</p>
                           ${c.email ? `<p class="text-xs text-muted truncate">${c.email}</p>` : ''}
                         </div>
                       </div>
@@ -2279,9 +2648,11 @@ function renderClients(el) {
                     <td class="px-4 py-3 text-muted">${c.doc || '—'}</td>
                     <td class="px-4 py-3 text-muted hidden sm:table-cell">${c.phone || '—'}</td>
                     <td class="px-4 py-3 hidden md:table-cell"><span class="badge ${stats.totalPurchases > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}">${stats.totalPurchases}</span></td>
-                    <td class="px-4 py-3 font-medium hidden md:table-cell">${stats.totalSpent > 0 ? fmtCur(stats.totalSpent) : '—'}</td>
+                    <td class="px-4 py-3 font-medium hidden lg:table-cell">${stats.totalSpent > 0 ? fmtCur(stats.totalSpent) : '—'}</td>
+                    <td class="px-4 py-3 hidden lg:table-cell">${daysSince !== null ? `<span class="${isInactive ? 'text-orange-600 font-semibold' : 'text-muted'}">${daysSince} día${daysSince !== 1 ? 's' : ''}</span>` : '<span class="text-muted">Nunca</span>'}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-1">
+                        ${c.phone ? `<button onclick="sendClientWhatsApp('${c.id}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-white hover:opacity-90" style="background:#25D366;" title="Contactar por WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
                         <button onclick="showClientHistory('${c.id}')" class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xs" title="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
                         <button onclick="openClientModal('${c.id}')" class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xs" title="Editar"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="deleteClient('${c.id}')" class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
@@ -2293,6 +2664,42 @@ function renderClients(el) {
           </table>
         </div>
       </div>
+
+      <!-- Inactive Clients Section -->
+      ${inactiveClients.length > 0 ? `
+      <div class="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden">
+        <div class="bg-orange-50 px-6 py-4 border-b border-orange-200">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center"><i class="fa-solid fa-bell text-orange-500"></i></div>
+            <div>
+              <h3 class="font-heading font-semibold text-orange-800">Clientes Inactivos (+${inactiveDaysThreshold} días sin compra)</h3>
+              <p class="text-sm text-orange-600">${inactiveClients.length} cliente(s) podrían necesitar seguimiento</p>
+            </div>
+          </div>
+        </div>
+        <div class="divide-y divide-orange-50">
+          ${inactiveClients.map(c => {
+            const stats = clientStats[c.id];
+            const lastDate = stats.lastPurchase ? new Date(stats.lastPurchase) : null;
+            const daysSince = lastDate ? Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24)) : '—';
+            const initials = c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+            const colors = ['bg-amber-100 text-amber-700', 'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700'];
+            const colorClass = colors[c.name.charCodeAt(0) % colors.length];
+            return `<div class="flex items-center gap-4 px-6 py-4 hover:bg-orange-50/50">
+              <div class="w-10 h-10 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold flex-shrink-0">${initials}</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900">${c.name}</p>
+                <p class="text-xs text-muted">Última compra: ${lastDate ? fmtDate(stats.lastPurchase) : 'N/A'} · <span class="text-orange-600 font-medium">${daysSince} días</span> sin comprar · Total gastado: ${fmtCur(stats.totalSpent)}</p>
+              </div>
+              <div class="flex gap-2 flex-shrink-0">
+                ${c.phone ? `<button onclick="contactInactiveClient('${c.id}', ${daysSince})" class="btn text-white px-3 py-2 text-xs hover:opacity-90" style="background:#25D366;"><i class="fa-brands fa-whatsapp mr-1"></i> Contactar</button>` : '<span class="text-xs text-muted">Sin teléfono</span>'}
+                ${c.phone ? `<button onclick="sendClientInvoiceWhatsApp('${c.id}')" class="btn bg-amber-50 text-amber-700 px-3 py-2 text-xs hover:bg-amber-100"><i class="fa-solid fa-file-invoice mr-1"></i> Enviar Factura</button>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      ` : ''}
     </div>`;
 }
 
@@ -2398,12 +2805,14 @@ function showClientHistory(clientId) {
     <div class="p-6">
       <div class="flex items-center gap-4 mb-4">
         <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">${initials}</div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h3 class="font-heading font-semibold text-lg">${client.name}</h3>
           <p class="text-sm text-muted">${client.doc || 'Sin documento'}${client.phone ? ' · ' + client.phone : ''}</p>
         </div>
+        ${client.phone ? `<button onclick="closeModal();sendClientWhatsApp('${clientId}')" class="btn text-white px-3 py-2 text-xs hover:opacity-90 flex-shrink-0" style="background:#25D366;"><i class="fa-brands fa-whatsapp mr-1"></i> WhatsApp</button>` : ''}
       </div>
       ${client.address ? `<p class="text-xs text-muted mb-3"><i class="fa-solid fa-location-dot mr-1"></i>${client.address}</p>` : ''}
+      ${client.email ? `<p class="text-xs text-muted mb-3"><i class="fa-solid fa-envelope mr-1"></i>${client.email}</p>` : ''}
       ${client.notes ? `<p class="text-xs text-muted mb-3"><i class="fa-solid fa-note-sticky mr-1"></i>${client.notes}</p>` : ''}
       <div class="grid grid-cols-2 gap-3 mb-4">
         <div class="p-3 rounded-xl bg-blue-50 text-center">
@@ -2431,7 +2840,10 @@ function showClientHistory(clientId) {
             </div>
           `).join('')}
       </div>
-      <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 mt-4">Cerrar</button>
+      <div class="flex gap-2 mt-4">
+        ${client.phone && sales.length > 0 ? `<button onclick="closeModal();sendClientInvoiceWhatsApp('${clientId}')" class="btn flex-1 justify-center py-2.5 text-sm text-white hover:opacity-90" style="background:#25D366;"><i class="fa-brands fa-whatsapp"></i> Enviar Última Factura</button>` : ''}
+        <button onclick="closeModal()" class="btn ${client.phone && sales.length > 0 ? 'flex-1' : 'w-full'} justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+      </div>
     </div>`, 'max-w-md');
 }
 
@@ -2645,6 +3057,18 @@ function renderSettings(el) {
               <input id="bizResolution" type="text" value="${biz.resolution}" placeholder="Resolución (opcional)" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
             </div>
           </div>
+
+          <!-- Client Alert Settings -->
+          <div class="mt-6 p-4 rounded-xl bg-orange-50 border border-orange-200">
+            <h4 class="font-heading font-semibold text-gray-900 mb-3"><i class="fa-solid fa-bell text-orange-500 mr-2"></i>Alerta de Clientes Inactivos</h4>
+            <p class="text-sm text-muted mb-3">Define cuantos dias sin compra deben pasar para que un cliente se marque como inactivo y aparezca en la alerta del Dashboard y la Cartera de Clientes.</p>
+            <div class="flex items-center gap-3">
+              <input id="bizInactiveDays" type="number" min="1" max="365" value="${biz.inactiveAlertDays || 15}" class="w-24 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-center font-semibold">
+              <span class="text-sm text-muted">dias sin compra para alertar</span>
+            </div>
+            <p class="text-xs text-muted mt-2"><i class="fa-solid fa-info-circle mr-1"></i>Clientes que superen este umbral apareceran resaltados en naranja y se mostrara la alerta en el panel principal.</p>
+          </div>
+
           <button onclick="saveBusinessSettings()" class="btn mt-4 bg-accent text-white px-6 py-2.5 text-sm hover:bg-accent-dark"><i class="fa-solid fa-save"></i> Guardar Datos</button>
         </div>
 
@@ -2714,13 +3138,15 @@ function renderSettings(el) {
 }
 
 function saveBusinessSettings() {
+  const inactiveDays = parseInt($('#bizInactiveDays').value) || 15;
   const settings = {
     name: $('#bizName').value.trim() || 'CoffeeWallet',
     nit: $('#bizNit').value.trim(),
     address: $('#bizAddress').value.trim(),
     phone: $('#bizPhone').value.trim(),
     email: $('#bizEmail').value.trim(),
-    resolution: $('#bizResolution').value.trim()
+    resolution: $('#bizResolution').value.trim(),
+    inactiveAlertDays: Math.max(1, Math.min(365, inactiveDays))
   };
   localStorage.setItem('sw_businessSettings', JSON.stringify(settings));
   showToast('Datos del negocio guardados correctamente');
@@ -2812,6 +3238,7 @@ async function init() {
 }
 
 init();
+
 </script>
 </body>
 </html>
