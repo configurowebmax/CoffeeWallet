@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- PWA Meta Tags -->
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkNvZmZlZVdhbGxldCIsCiAgInNob3J0X25hbWUiOiAiQ29mZmVlV2FsbGV0IiwKICAiZGVzY3JpcHRpb24iOiAiSW52ZW50YXJpbyB5IENvbnRyb2wgZGUgQ2Fmw6kiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2Y5ZmFmYiIsCiAgInRoZW1lX2NvbG9yIjogIiNmNTllMGIiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIyYVdWM1FtOTRQU0l3SURBZ01UQXdJREV3TUNJZ2VHMXNibk05SW1oMGRIQTZMeTkzZDNjdWR6TXViM0puTHpJd01EQXZjM1puSWo0OFkybHlZMnhsSUdONFBTSTFNQ0lnWTNrOUlqVXdJaUJ5UFNJNU55SWdabWxzYkQwaUl6QkJNMFF5UlNJdlBqeDBaWGgwSUhnOUlqVXdJaUI1UFNJNU5pSWdabTl1ZEMxemFYcGxQU0k1TUNJZ1ptbHNiRDBpZDJocGRHVWlJSFJsZUhRdFlXNWphRzl5UFNKdGFXUmtiR1VpSUdadmJuUXRkMlZwWjJoMFBTSTVNREFpUGt4Q1BDOTBaWGgwUGp3dmMzWm5QZz09Iiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwifV0KfQ==">
+<meta name="theme-color" content="#f59e0b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CoffeeWallet">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjZjU5ZTBiIi8+PHRleHQgeD0iNTAiIHk9IjY1IiBmb250LXNpemU9IjUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSI+8J+OoDwvdGV4dD48L3N2Zz4=">
 <title>CoffeeWallet — Inventario y Control de Café</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,200;9..40,400;9..40,500;9..40,700;9..40,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -97,6 +104,32 @@ input:focus, select:focus, textarea:focus {
 .tab-btn { padding:8px 20px; font-weight:500; border-bottom:2px solid transparent; transition:all 0.15s ease; cursor:pointer; }
 .tab-btn.active { border-bottom-color:#f59e0b; color:#d97706; }
 .tab-btn:hover:not(.active) { color:#92400e; }
+
+/* Invoice Print Styles */
+.invoice-page { font-family: 'DM Sans', sans-serif; color: #111827; max-width: 800px; margin: 0 auto; padding: 40px; }
+.invoice-page h1, .invoice-page h2, .invoice-page h3 { font-family: 'Space Grotesk', sans-serif; }
+.invoice-page table { width: 100%; border-collapse: collapse; }
+.invoice-page th, .invoice-page td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+.invoice-page th { background: #f9fafb; font-weight: 600; color: #374151; }
+.invoice-page .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 3px solid #f59e0b; }
+.invoice-page .invoice-brand { display: flex; align-items: center; gap: 16px; }
+.invoice-page .invoice-brand-icon { width: 56px; height: 56px; background: #f59e0b; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
+.invoice-page .invoice-meta { text-align: right; }
+.invoice-page .invoice-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+.invoice-page .invoice-info-box { background: #f9fafb; border-radius: 12px; padding: 16px; }
+.invoice-page .invoice-info-box h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; margin-bottom: 8px; }
+.invoice-page .invoice-totals { margin-top: 16px; }
+.invoice-page .invoice-total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+.invoice-page .invoice-total-row.grand { border-top: 2px solid #f59e0b; margin-top: 8px; padding-top: 12px; font-size: 18px; font-weight: 700; }
+.invoice-page .invoice-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 13px; }
+@media print {
+  body { margin: 0; padding: 0; background: white; }
+  .no-print { display: none !important; }
+  .invoice-page { padding: 20px; max-width: none; }
+}
+
+/* PWA Install Banner */
+.install-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 16px 24px; z-index: 80; display: flex; align-items: center; gap: 16px; border: 1px solid #e5e7eb; }
 </style>
 </head>
 <body>
@@ -190,6 +223,17 @@ input:focus, select:focus, textarea:focus {
 
 <!-- TOAST CONTAINER -->
 <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2 max-w-sm w-full"></div>
+
+<!-- PWA Install Banner -->
+<div id="installBanner" class="install-banner" style="display:none;">
+  <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-download text-accent"></i></div>
+  <div class="flex-1">
+    <p class="text-sm font-medium text-gray-900">Instalar CoffeeWallet</p>
+    <p class="text-xs text-muted">Acceso rápido desde tu escritorio</p>
+  </div>
+  <button onclick="installApp()" class="btn bg-accent text-white px-4 py-2 text-xs hover:bg-accent-dark">Instalar</button>
+  <button onclick="dismissInstall()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+</div>
 
 <script>
 // ═══════════════════════════════════════════
@@ -316,6 +360,8 @@ const navItems = [
   { id: 'new-expense', icon: 'fa-receipt', label: 'Nuevo Gasto' },
   { id: 'history', icon: 'fa-clock-rotate-left', label: 'Historial' },
   { id: 'analytics', icon: 'fa-chart-line', label: 'Análisis' },
+  { id: 'clients', icon: 'fa-address-book', label: 'Clientes' },
+  { id: 'invoices', icon: 'fa-file-invoice', label: 'Facturas' },
   { id: 'settings', icon: 'fa-gear', label: 'Configuración' },
 ];
 
@@ -357,6 +403,58 @@ function toggleSidebar() {
   const ov = $('#sidebarOverlay');
   sb.classList.toggle('open');
   ov.classList.toggle('active');
+}
+
+// ═══════════════════════════════════════════
+// PWA INSTALL
+// ═══════════════════════════════════════════
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const dismissed = localStorage.getItem('sw_installDismissed');
+  if (!dismissed) {
+    const banner = document.getElementById('installBanner');
+    if (banner) banner.style.display = 'flex';
+  }
+});
+
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') showToast('App instalada correctamente');
+    deferredPrompt = null;
+    document.getElementById('installBanner').style.display = 'none';
+  });
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').style.display = 'none';
+  localStorage.setItem('sw_installDismissed', 'true');
+}
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'cw-v2';
+    self.addEventListener('install', e => { self.skipWaiting(); });
+    self.addEventListener('activate', e => { e.waitUntil(clients.claim()); });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
+          if (resp.ok && e.request.url.startsWith('http')) {
+            const clone = resp.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
+          return resp;
+        }).catch(() => new Response('Offline', { status: 503 })))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
 }
 
 // ═══════════════════════════════════════════
@@ -429,6 +527,12 @@ async function seedData() {
   DB.set('expenses', []);
   DB.set('purchases', []);
   DB.set('walletOps', []);
+  DB.set('clients', [
+    { id: 'cli_001', name: 'María García', doc: '1098765432', phone: '3101234567', email: 'maria@email.com', address: 'Calle 10 #5-20, Bogotá', notes: 'Cliente frecuente', createdAt: now() },
+    { id: 'cli_002', name: 'Pedro Martínez', doc: 'NIT 900123456-7', phone: '3159876543', email: 'pedro@cafedelvalle.com', address: 'Cra 7 #45-10, Medellín', notes: 'Empresa', createdAt: now() },
+    { id: 'cli_003', name: 'Laura López', doc: '1034567890', phone: '3201112233', email: '', address: '', notes: '', createdAt: now() },
+  ]);
+  DB.set('saleCounter', 0);
 }
 
 // ═══════════════════════════════════════════
@@ -447,6 +551,8 @@ function renderPage() {
     case 'new-sale': renderNewSale(content); break;
     case 'new-expense': renderNewExpense(content); break;
     case 'history': renderHistory(content); break;
+    case 'clients': renderClients(content); break;
+    case 'invoices': renderInvoices(content); break;
     case 'analytics': renderAnalytics(content); break;
     case 'settings': renderSettings(content); break;
   }
@@ -1360,6 +1466,10 @@ function doBuyStock() {
 let saleCart = [];
 let saleWallet = '';
 let saleSearch = '';
+let saleCustomerName = '';
+let saleCustomerDoc = '';
+let lastCompletedSaleId = null;
+let saleClientId = '';
 
 function renderNewSale(el) {
   const products = DB.get('products');
@@ -1371,6 +1481,12 @@ function renderNewSale(el) {
   const cartTotal = saleCart.reduce((s, i) => s + i.sellingPrice * i.qty, 0);
   const cartCost = saleCart.reduce((s, i) => s + i.costPrice * i.qty, 0);
   const cartProfit = cartTotal - cartCost;
+
+  // Show/hide manual client fields based on dropdown
+  if (saleClientId) {
+    const cl = DB.get('clients').find(c => c.id === saleClientId);
+    if (cl) { saleCustomerName = ''; saleCustomerDoc = ''; }
+  }
 
   el.innerHTML = `
     <div class="space-y-6">
@@ -1441,6 +1557,21 @@ function renderNewSale(el) {
               <div class="flex justify-between text-sm"><span class="text-muted">Total</span><span class="font-semibold">${fmtCur(cartTotal)}</span></div>
               <div class="flex justify-between text-sm"><span class="text-muted">Costo</span><span class="font-semibold">${fmtCur(cartCost)}</span></div>
               <div class="flex justify-between text-sm"><span class="text-muted">Ganancia</span><span class="font-semibold text-emerald-600">${fmtCur(cartProfit)}</span></div>
+            </div>
+            <div class="mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fa-solid fa-user text-muted mr-1"></i>Cliente</label>
+              <select id="saleClientSelect" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+                <option value="">Cliente General (sin registrar)</option>
+                ${DB.get('clients').map(c => `<option value="${c.id}" ${saleClientId === c.id ? 'selected' : ''}>${c.name} ${c.doc ? '(' + c.doc + ')' : ''}</option>`).join('')}
+              </select>
+            </div>
+            <div class="mb-3" id="manualClientFields" style="${saleClientId ? 'display:none' : ''}">
+              <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fa-solid fa-pen text-muted mr-1"></i>Nombre Manual (si no está registrado)</label>
+              <input type="text" placeholder="Nombre del cliente..." value="${saleCustomerName}" oninput="saleCustomerName=this.value" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div class="mb-4" id="manualDocField" style="${saleClientId ? 'display:none' : ''}">
+              <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fa-solid fa-id-card text-muted mr-1"></i>Documento / NIT</label>
+              <input type="text" placeholder="CC / NIT..." value="${saleCustomerDoc}" oninput="saleCustomerDoc=this.value" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
             </div>
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Billetera destino</label>
@@ -1544,18 +1675,55 @@ function completeSale() {
   }
   DB.set('products', products);
 
+  // Increment sale counter
+  let saleCounter = parseInt(localStorage.getItem('sw_saleCounter')) || 0;
+  saleCounter++;
+  localStorage.setItem('sw_saleCounter', saleCounter.toString());
+  const saleNumber = 'V-' + saleCounter.toString().padStart(5, '0');
+
+  // Get client info
+  const saleClientId = $('#saleClientSelect') ? $('#saleClientSelect').value : '';
+  const clients = DB.get('clients');
+  const selectedClient = saleClientId ? clients.find(c => c.id === saleClientId) : null;
+  const customerName = selectedClient ? selectedClient.name : (saleCustomerName.trim() || 'Cliente General');
+  const customerDoc = selectedClient ? selectedClient.doc : (saleCustomerDoc.trim() || '');
+
   // Create sale record
   const sales = DB.get('sales');
+  const saleId = genId();
   sales.push({
-    id: genId(),
+    id: saleId,
+    saleNumber,
+    clientId: saleClientId || null,
+    customerName,
+    customerDoc,
+    invoiceNumber: null,
     items: saleCart.map(i => ({ productId: i.productId, productName: i.productName, productSku: i.productSku, costPrice: i.costPrice, sellingPrice: i.sellingPrice, qty: i.qty })),
     total, totalCost, walletId, date: now()
   });
   DB.set('sales', sales);
 
+  lastCompletedSaleId = saleId;
   showToast(`Venta completada: ${fmtCur(total)} · Ganancia: ${fmtCur(total - totalCost)}`);
   saleCart = [];
   saleWallet = '';
+  saleCustomerName = '';
+  saleCustomerDoc = '';
+  saleClientId = '';
+
+  // Show success modal with invoice option
+  openModal(`
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-circle-check text-3xl text-emerald-500"></i></div>
+      <h3 class="font-heading font-semibold text-lg mb-2">Venta Exitosa</h3>
+      <p class="text-sm text-muted mb-1">Total: <strong>${fmtCur(total)}</strong></p>
+      <p class="text-sm text-muted mb-6">Ganancia: <strong class="text-emerald-600">${fmtCur(total - totalCost)}</strong></p>
+      <div class="space-y-2">
+        <button onclick="closeModal();generateInvoice('${saleId}')" class="btn w-full justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark"><i class="fa-solid fa-file-invoice"></i> Generar Factura</button>
+        <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+      </div>
+    </div>`, 'max-w-sm');
+
   renderPage(); updateBalance();
 }
 
@@ -1706,8 +1874,8 @@ function renderHistory(el) {
               return `<div class="flex items-center gap-4 p-4 border-l-4 ${colors[tx._type]} border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onclick="showTxDetail('${tx._type}','${tx._id}')">
                 <div class="w-10 h-10 rounded-xl ${bgColors[tx._type]} flex items-center justify-center flex-shrink-0"><i class="fa-solid ${icons[tx._type]}"></i></div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900">${labels[tx._type]}</p>
-                  <p class="text-xs text-muted truncate">${desc}</p>
+                  <p class="text-sm font-medium text-gray-900">${tx.saleNumber ? '<span class="badge bg-blue-100 text-blue-700 mr-1">' + tx.saleNumber + '</span>' : ''}${labels[tx._type]}${tx.invoiceNumber ? ' <span class="badge bg-amber-100 text-amber-700 ml-1">#' + tx.invoiceNumber + '</span>' : ''}</p>
+                  <p class="text-xs text-muted truncate">${tx.customerName ? tx.customerName + ' · ' : ''}${desc}</p>
                 </div>
                 <div class="text-right flex-shrink-0">
                   <p class="text-sm font-bold ${tx._type === 'sale' ? 'text-emerald-600' : tx._type === 'expense' ? 'text-red-600' : 'text-amber-600'}">${tx._type === 'sale' ? '+' : '-'}${fmtCur(tx._amount)}</p>
@@ -1727,8 +1895,10 @@ function showTxDetail(type, id) {
     const sale = DB.get('sales').find(s => s.id === id);
     if (!sale) return;
     html = `<div class="p-6">
-      <h3 class="font-heading font-semibold text-lg mb-1">Detalle de Venta</h3>
+      <h3 class="font-heading font-semibold text-lg mb-1">Detalle de Venta ${sale.saleNumber ? '<span class="badge bg-blue-100 text-blue-700 ml-2">' + sale.saleNumber + '</span>' : ''}</h3>
       <p class="text-sm text-muted mb-4">${fmtDateTime(sale.date)}</p>
+      ${sale.customerName ? `<div class="p-3 rounded-xl bg-blue-50 mb-4"><p class="text-xs text-blue-600 font-medium mb-1">Cliente</p><p class="text-sm font-medium text-gray-900">${sale.customerName}</p>${sale.customerDoc ? `<p class="text-xs text-muted">Doc: ${sale.customerDoc}</p>` : ''}</div>` : ''}
+      ${sale.invoiceNumber ? `<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-4 flex items-center gap-3"><i class="fa-solid fa-file-invoice text-amber-600"></i><div><p class="text-sm font-medium text-amber-800">Factura #${sale.invoiceNumber}</p><p class="text-xs text-amber-600">Generada</p></div></div>` : ''}
       <div class="space-y-2 mb-4">
         ${sale.items.map(i => `<div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm">${i.productName} ×${i.qty}</span><span class="text-sm font-semibold">${fmtCur(i.sellingPrice * i.qty)}</span></div>`).join('')}
       </div>
@@ -1737,7 +1907,10 @@ function showTxDetail(type, id) {
         <div class="flex justify-between text-sm"><span class="text-muted">Costo</span><span class="font-semibold">${fmtCur(sale.totalCost)}</span></div>
         <div class="flex justify-between text-sm"><span class="text-muted">Ganancia</span><span class="font-semibold text-emerald-600">${fmtCur(sale.total - sale.totalCost)}</span></div>
       </div>
-      <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 mt-4">Cerrar</button>
+      <div class="flex gap-2 mt-4">
+        <button onclick="closeModal();generateInvoice('${sale.id}')" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark"><i class="fa-solid fa-file-invoice"></i> ${sale.invoiceNumber ? 'Ver Factura' : 'Generar Factura'}</button>
+        <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+      </div>
     </div>`;
   } else if (type === 'expense') {
     const exp = DB.get('expenses').find(e => e.id === id);
@@ -1769,6 +1942,497 @@ function showTxDetail(type, id) {
     </div>`;
   }
   if (html) openModal(html, 'max-w-md');
+}
+
+// ═══════════════════════════════════════════
+// INVOICE SYSTEM
+// ═══════════════════════════════════════════
+function getBusinessSettings() {
+  try { return JSON.parse(localStorage.getItem('sw_businessSettings')) || { name: 'CoffeeWallet', nit: '', address: '', phone: '', email: '', resolution: '' }; } catch { return { name: 'CoffeeWallet', nit: '', address: '', phone: '', email: '', resolution: '' }; }
+}
+
+function getNextInvoiceNumber() {
+  let counter = parseInt(localStorage.getItem('sw_invoiceCounter')) || 0;
+  counter++;
+  localStorage.setItem('sw_invoiceCounter', counter.toString());
+  return counter.toString().padStart(6, '0');
+}
+
+function generateInvoice(saleId) {
+  const sale = DB.get('sales').find(s => s.id === saleId);
+  if (!sale) { showToast('Venta no encontrada', 'error'); return; }
+
+  const biz = getBusinessSettings();
+  const wallets = DB.get('wallets');
+  const wallet = wallets.find(w => w.id === sale.walletId);
+
+  // Assign invoice number if not yet assigned
+  if (!sale.invoiceNumber) {
+    sale.invoiceNumber = getNextInvoiceNumber();
+    const sales = DB.get('sales');
+    const idx = sales.findIndex(s => s.id === saleId);
+    if (idx >= 0) { sales[idx] = sale; DB.set('sales', sales); }
+  }
+
+  const invNum = sale.invoiceNumber;
+  const saleDate = new Date(sale.date);
+  const subtotal = sale.total;
+
+  const invoiceHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Factura #${invNum} - ${biz.name}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,200;9..40,400;9..40,500;9..40,700;9..40,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; color: #111827; background: #f9fafb; }
+  h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .invoice-page { max-width: 800px; margin: 0 auto; padding: 40px; background: white; min-height: 100vh; }
+  .invoice-page table { width: 100%; border-collapse: collapse; }
+  .invoice-page th, .invoice-page td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+  .invoice-page th { background: #f9fafb; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .invoice-page .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 3px solid #f59e0b; }
+  .invoice-page .brand { display: flex; align-items: center; gap: 16px; }
+  .invoice-page .brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
+  .invoice-page .meta { text-align: right; }
+  .invoice-page .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .invoice-page .info-box { background: #f9fafb; border-radius: 12px; padding: 16px; }
+  .invoice-page .info-box h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; margin-bottom: 8px; }
+  .invoice-page .totals { margin-top: 20px; margin-left: auto; width: 300px; }
+  .invoice-page .total-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+  .invoice-page .total-row.grand { border-top: 2px solid #f59e0b; border-bottom: none; margin-top: 8px; padding-top: 14px; font-size: 20px; font-weight: 700; color: #111827; }
+  .invoice-page .footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px; }
+  .invoice-page .footer p { margin-bottom: 4px; }
+  .no-print { margin: 0; padding: 20px; display: flex; gap: 12px; justify-content: center; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
+  .no-print button { font-family: 'DM Sans', sans-serif; padding: 12px 28px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.15s; }
+  .no-print .btn-print { background: #f59e0b; color: white; }
+  .no-print .btn-print:hover { background: #d97706; }
+  .no-print .btn-close { background: #f3f4f6; color: #374151; }
+  .no-print .btn-close:hover { background: #e5e7eb; }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+    .invoice-page { padding: 20px; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="no-print">
+    <button class="btn-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir Factura</button>
+    <button class="btn-close" onclick="window.close()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
+  </div>
+  <div class="invoice-page">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-mug-hot"></i></div>
+        <div>
+          <h1 style="font-size:24px;font-weight:700;color:#111827;">${biz.name}</h1>
+          ${biz.nit ? `<p style="font-size:13px;color:#6b7280;margin-top:2px;">NIT: ${biz.nit}</p>` : ''}
+          ${biz.address ? `<p style="font-size:13px;color:#6b7280;">${biz.address}</p>` : ''}
+          ${biz.phone ? `<p style="font-size:13px;color:#6b7280;">Tel: ${biz.phone}</p>` : ''}
+          ${biz.email ? `<p style="font-size:13px;color:#6b7280;">${biz.email}</p>` : ''}
+        </div>
+      </div>
+      <div class="meta">
+        <h2 style="font-size:28px;font-weight:700;color:#f59e0b;">FACTURA</h2>
+        <p style="font-size:16px;font-weight:600;color:#374151;margin-top:4px;">#${invNum}</p>
+        ${sale.saleNumber ? `<p style="font-size:12px;color:#6b7280;">Venta: ${sale.saleNumber}</p>` : ''}
+        <p style="font-size:13px;color:#6b7280;margin-top:8px;">Fecha: ${saleDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+        <p style="font-size:13px;color:#6b7280;">Hora: ${saleDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</p>
+        ${biz.resolution ? `<p style="font-size:12px;color:#6b7280;margin-top:4px;">Resolucion: ${biz.resolution}</p>` : ''}
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-box">
+        <h4><i class="fa-solid fa-user" style="margin-right:6px;"></i>Informacion del Cliente</h4>
+        <p style="font-size:15px;font-weight:600;color:#111827;">${sale.customerName || 'Cliente General'}</p>
+        ${sale.customerDoc ? `<p style="font-size:13px;color:#6b7280;margin-top:4px;">Documento: ${sale.customerDoc}</p>` : '<p style="font-size:13px;color:#9ca3af;margin-top:4px;">Sin documento</p>'}
+      </div>
+      <div class="info-box">
+        <h4><i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>Informacion de Pago</h4>
+        <p style="font-size:15px;font-weight:600;color:#111827;">${wallet ? wallet.name : 'N/A'}</p>
+        <p style="font-size:13px;color:#6b7280;margin-top:4px;">Metodo de pago: Efectivo / Digital</p>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Producto</th>
+          <th style="width:60px;">SKU</th>
+          <th style="text-align:right;width:80px;">Cant.</th>
+          <th style="text-align:right;width:110px;">Precio Unit.</th>
+          <th style="text-align:right;width:110px;">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sale.items.map((item, idx) => `
+          <tr>
+            <td style="color:#6b7280;">${idx + 1}</td>
+            <td style="font-weight:500;">${item.productName}</td>
+            <td style="color:#6b7280;">${item.productSku || '-'}</td>
+            <td style="text-align:right;">${item.qty}</td>
+            <td style="text-align:right;">${fmtCur(item.sellingPrice)}</td>
+            <td style="text-align:right;font-weight:600;">${fmtCur(item.sellingPrice * item.qty)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div class="total-row">
+        <span style="color:#6b7280;">Subtotal</span>
+        <span style="font-weight:600;">${fmtCur(subtotal)}</span>
+      </div>
+      <div class="total-row grand">
+        <span>TOTAL A PAGAR</span>
+        <span>${fmtCur(subtotal)}</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p style="font-weight:600;font-size:14px;color:#374151;">Gracias por su compra</p>
+      <p>${biz.name}${biz.address ? ' &mdash; ' + biz.address : ''}${biz.phone ? ' &mdash; Tel: ' + biz.phone : ''}</p>
+      ${biz.nit ? `<p>NIT: ${biz.nit}</p>` : ''}
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const invoiceWindow = window.open('', '_blank', 'width=850,height=700,scrollbars=yes');
+  if (invoiceWindow) {
+    invoiceWindow.document.write(invoiceHTML);
+    invoiceWindow.document.close();
+  } else {
+    showToast('Permite ventanas emergentes para ver la factura', 'warning');
+  }
+}
+
+// ═══════════════════════════════════════════
+// INVOICES PAGE
+// ═══════════════════════════════════════════
+function renderInvoices(el) {
+  const sales = DB.get('sales').filter(s => s.invoiceNumber);
+  sales.sort((a, b) => b.date.localeCompare(a.date));
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="font-heading font-semibold text-lg text-gray-900">Facturas</h2>
+          <p class="text-sm text-muted">${sales.length} factura(s) generada(s)</p>
+        </div>
+      </div>
+
+      ${sales.length === 0 ? `
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+          <div class="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-file-invoice text-2xl text-gray-300"></i></div>
+          <p class="text-muted text-sm mb-1">Sin facturas generadas</p>
+          <p class="text-xs text-muted">Completa una venta y genera una factura desde el historial</p>
+        </div>
+      ` : `
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-gray-50 text-left text-muted">
+                <th class="px-4 py-3 font-medium">Factura</th>
+                <th class="px-4 py-3 font-medium">Fecha</th>
+                <th class="px-4 py-3 font-medium">Cliente</th>
+                <th class="px-4 py-3 font-medium">Productos</th>
+                <th class="px-4 py-3 font-medium">Total</th>
+                <th class="px-4 py-3 font-medium">Acciones</th>
+              </tr></thead>
+              <tbody>
+                ${sales.map(s => {
+                  const productCount = s.items ? s.items.length : 0;
+                  return `<tr class="border-t border-gray-50 hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                      <span class="font-semibold text-accent-dark">#${s.invoiceNumber}</span>
+                    </td>
+                    <td class="px-4 py-3 text-muted">${fmtDateTime(s.date)}</td>
+                    <td class="px-4 py-3">
+                      <div>
+                        <p class="font-medium text-gray-900">${s.customerName || 'Cliente General'}</p>
+                        ${s.customerDoc ? `<p class="text-xs text-muted">${s.customerDoc}</p>` : ''}
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-muted">${productCount} producto(s)</td>
+                    <td class="px-4 py-3 font-bold text-emerald-600">${fmtCur(s.total)}</td>
+                    <td class="px-4 py-3">
+                      <div class="flex gap-1">
+                        <button onclick="generateInvoice('${s.id}')" class="btn bg-accent text-white px-3 py-1.5 text-xs hover:bg-accent-dark"><i class="fa-solid fa-print"></i> Imprimir</button>
+                        <button onclick="showTxDetail('sale','${s.id}')" class="btn bg-gray-50 text-gray-700 px-3 py-1.5 text-xs hover:bg-gray-100"><i class="fa-solid fa-eye"></i></button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// CLIENTS PAGE
+// ═══════════════════════════════════════════
+let clientSearch = '';
+
+function renderClients(el) {
+  const clients = DB.get('clients');
+  const sales = DB.get('sales');
+  const filtered = clients.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.doc && c.doc.toLowerCase().includes(clientSearch.toLowerCase())) || (c.phone && c.phone.includes(clientSearch)));
+
+  // Compute stats per client
+  const clientStats = {};
+  clients.forEach(c => { clientStats[c.id] = { totalPurchases: 0, totalSpent: 0, lastPurchase: null }; });
+  sales.forEach(s => {
+    if (s.clientId && clientStats[s.clientId]) {
+      clientStats[s.clientId].totalPurchases++;
+      clientStats[s.clientId].totalSpent += s.total;
+      if (!clientStats[s.clientId].lastPurchase || s.date > clientStats[s.clientId].lastPurchase) {
+        clientStats[s.clientId].lastPurchase = s.date;
+      }
+    }
+  });
+
+  const totalClients = clients.length;
+  const activeClients = Object.values(clientStats).filter(s => s.totalPurchases > 0).length;
+  const totalRevenue = Object.values(clientStats).reduce((sum, s) => sum + s.totalSpent, 0);
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="font-heading font-semibold text-lg text-gray-900">Cartera de Clientes</h2>
+          <p class="text-sm text-muted">${totalClients} cliente(s) registrados</p>
+        </div>
+        <button onclick="openClientModal()" class="btn bg-accent text-white px-4 py-2.5 text-sm hover:bg-accent-dark"><i class="fa-solid fa-user-plus"></i> Nuevo Cliente</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-muted font-medium">Total Clientes</span>
+            <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center"><i class="fa-solid fa-users text-blue-500 text-sm"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading text-gray-900">${totalClients}</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-muted font-medium">Clientes Activos</span>
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center"><i class="fa-solid fa-user-check text-emerald-500 text-sm"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading text-gray-900">${activeClients}</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-muted font-medium">Total Facturado</span>
+            <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center"><i class="fa-solid fa-coins text-amber-500 text-sm"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading text-gray-900">${fmtCur(totalRevenue)}</p>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" placeholder="Buscar por nombre, documento o teléfono..." value="${clientSearch}" oninput="clientSearch=this.value;renderPage()" class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white">
+      </div>
+
+      <!-- Clients Table -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50 text-left text-muted">
+              <th class="px-4 py-3 font-medium">Cliente</th>
+              <th class="px-4 py-3 font-medium">Documento</th>
+              <th class="px-4 py-3 font-medium hidden sm:table-cell">Teléfono</th>
+              <th class="px-4 py-3 font-medium hidden md:table-cell">Compras</th>
+              <th class="px-4 py-3 font-medium hidden md:table-cell">Total Gastado</th>
+              <th class="px-4 py-3 font-medium">Acciones</th>
+            </tr></thead>
+            <tbody>
+              ${filtered.length === 0 ? `<tr><td colspan="6" class="px-4 py-8 text-center text-muted">Sin clientes registrados</td></tr>` :
+                filtered.map(c => {
+                  const stats = clientStats[c.id] || { totalPurchases: 0, totalSpent: 0, lastPurchase: null };
+                  const initials = c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                  const colors = ['bg-amber-100 text-amber-700', 'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700'];
+                  const colorClass = colors[c.name.charCodeAt(0) % colors.length];
+                  return `<tr class="border-t border-gray-50 hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold flex-shrink-0">${initials}</div>
+                        <div class="min-w-0">
+                          <p class="font-medium text-gray-900 truncate">${c.name}</p>
+                          ${c.email ? `<p class="text-xs text-muted truncate">${c.email}</p>` : ''}
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-muted">${c.doc || '—'}</td>
+                    <td class="px-4 py-3 text-muted hidden sm:table-cell">${c.phone || '—'}</td>
+                    <td class="px-4 py-3 hidden md:table-cell"><span class="badge ${stats.totalPurchases > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}">${stats.totalPurchases}</span></td>
+                    <td class="px-4 py-3 font-medium hidden md:table-cell">${stats.totalSpent > 0 ? fmtCur(stats.totalSpent) : '—'}</td>
+                    <td class="px-4 py-3">
+                      <div class="flex gap-1">
+                        <button onclick="showClientHistory('${c.id}')" class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xs" title="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                        <button onclick="openClientModal('${c.id}')" class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xs" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteClient('${c.id}')" class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openClientModal(editId) {
+  const clients = DB.get('clients');
+  const c = editId ? clients.find(x => x.id === editId) : null;
+  const isEdit = !!c;
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">${isEdit ? 'Editar' : 'Nuevo'} Cliente</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo *</label>
+          <input id="mCliName" type="text" value="${c ? c.name : ''}" placeholder="Nombre del cliente" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Documento / NIT</label>
+            <input id="mCliDoc" type="text" value="${c ? c.doc : ''}" placeholder="CC / NIT" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+            <input id="mCliPhone" type="text" value="${c ? c.phone : ''}" placeholder="3101234567" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input id="mCliEmail" type="text" value="${c ? c.email : ''}" placeholder="email@ejemplo.com" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+          <input id="mCliAddress" type="text" value="${c ? c.address : ''}" placeholder="Dirección del cliente" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+          <textarea id="mCliNotes" rows="2" placeholder="Notas internas..." class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm resize-none">${c ? c.notes : ''}</textarea>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="saveClient('${editId || ''}')" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark">${isEdit ? 'Guardar' : 'Crear'}</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function saveClient(editId) {
+  const name = $('#mCliName').value.trim();
+  const doc = $('#mCliDoc').value.trim();
+  const phone = $('#mCliPhone').value.trim();
+  const email = $('#mCliEmail').value.trim();
+  const address = $('#mCliAddress').value.trim();
+  const notes = $('#mCliNotes').value.trim();
+
+  if (!name) { showToast('Ingresa un nombre', 'warning'); return; }
+
+  const clients = DB.get('clients');
+
+  if (editId) {
+    const c = clients.find(x => x.id === editId);
+    if (c) { Object.assign(c, { name, doc, phone, email, address, notes }); }
+  } else {
+    clients.push({ id: genId(), name, doc, phone, email, address, notes, createdAt: now() });
+  }
+  DB.set('clients', clients);
+  closeModal();
+  showToast(editId ? 'Cliente actualizado' : 'Cliente registrado');
+  renderPage();
+}
+
+function deleteClient(id) {
+  const clients = DB.get('clients');
+  const c = clients.find(x => x.id === id);
+  if (!c) return;
+  openModal(`
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-trash text-2xl text-red-500"></i></div>
+      <h3 class="font-heading font-semibold text-lg mb-2">Eliminar Cliente</h3>
+      <p class="text-sm text-muted mb-6">¿Eliminar <strong>${c.name}</strong>? Las ventas asociadas no se eliminarán.</p>
+      <div class="flex gap-2">
+        <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+        <button onclick="confirmDeleteClient('${id}')" class="btn flex-1 justify-center py-2.5 text-sm bg-danger text-white hover:bg-red-600">Eliminar</button>
+      </div>
+    </div>`, 'max-w-sm');
+}
+
+function confirmDeleteClient(id) {
+  const clients = DB.get('clients').filter(c => c.id !== id);
+  DB.set('clients', clients);
+  closeModal();
+  showToast('Cliente eliminado');
+  renderPage();
+}
+
+function showClientHistory(clientId) {
+  const clients = DB.get('clients');
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return;
+  const sales = DB.get('sales').filter(s => s.clientId === clientId).sort((a, b) => b.date.localeCompare(a.date));
+  const totalSpent = sales.reduce((sum, s) => sum + s.total, 0);
+  const initials = client.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  openModal(`
+    <div class="p-6">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">${initials}</div>
+        <div>
+          <h3 class="font-heading font-semibold text-lg">${client.name}</h3>
+          <p class="text-sm text-muted">${client.doc || 'Sin documento'}${client.phone ? ' · ' + client.phone : ''}</p>
+        </div>
+      </div>
+      ${client.address ? `<p class="text-xs text-muted mb-3"><i class="fa-solid fa-location-dot mr-1"></i>${client.address}</p>` : ''}
+      ${client.notes ? `<p class="text-xs text-muted mb-3"><i class="fa-solid fa-note-sticky mr-1"></i>${client.notes}</p>` : ''}
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="p-3 rounded-xl bg-blue-50 text-center">
+          <p class="text-lg font-bold text-blue-700">${sales.length}</p>
+          <p class="text-xs text-blue-600">Compras</p>
+        </div>
+        <div class="p-3 rounded-xl bg-emerald-50 text-center">
+          <p class="text-lg font-bold text-emerald-700">${fmtCur(totalSpent)}</p>
+          <p class="text-xs text-emerald-600">Total Gastado</p>
+        </div>
+      </div>
+      <div class="max-h-60 overflow-y-auto space-y-2">
+        ${sales.length === 0 ? '<p class="text-sm text-muted text-center py-4">Sin compras registradas</p>' :
+          sales.map(s => `
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100" onclick="closeModal();showTxDetail('sale','${s.id}')">
+              <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-cart-shopping text-emerald-500 text-xs"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900">${s.saleNumber || 'Venta'} ${s.invoiceNumber ? '<span class="badge bg-amber-100 text-amber-700 ml-1">#' + s.invoiceNumber + '</span>' : ''}</p>
+                <p class="text-xs text-muted">${s.items ? s.items.map(i => i.productName).join(', ') : ''}</p>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <p class="text-sm font-bold text-emerald-600">${fmtCur(s.total)}</p>
+                <p class="text-xs text-muted">${fmtDateTime(s.date)}</p>
+              </div>
+            </div>
+          `).join('')}
+      </div>
+      <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 mt-4">Cerrar</button>
+    </div>`, 'max-w-md');
 }
 
 // ═══════════════════════════════════════════
@@ -1943,11 +2607,47 @@ function renderSettings(el) {
   const products = DB.get('products');
   const sales = DB.get('sales');
   const expenses = DB.get('expenses');
+  const biz = getBusinessSettings();
+  const invoicesCount = sales.filter(s => s.invoiceNumber).length;
+  const invoiceCounter = parseInt(localStorage.getItem('sw_invoiceCounter')) || 0;
 
   el.innerHTML = `
     <div class="space-y-6">
       <h2 class="font-heading font-semibold text-lg text-gray-900">Configuración</h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Business Info -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:col-span-2">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-building text-accent mr-2"></i>Datos del Negocio (Facturación)</h3>
+          <p class="text-sm text-muted mb-4">Esta información aparecerá en las facturas generadas.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Negocio</label>
+              <input id="bizName" type="text" value="${biz.name}" placeholder="Nombre del negocio" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">NIT</label>
+              <input id="bizNit" type="text" value="${biz.nit}" placeholder="NIT del negocio" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <input id="bizPhone" type="text" value="${biz.phone}" placeholder="Teléfono" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+              <input id="bizAddress" type="text" value="${biz.address}" placeholder="Dirección" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input id="bizEmail" type="text" value="${biz.email}" placeholder="Email" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Resolución DIAN</label>
+              <input id="bizResolution" type="text" value="${biz.resolution}" placeholder="Resolución (opcional)" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+          </div>
+          <button onclick="saveBusinessSettings()" class="btn mt-4 bg-accent text-white px-6 py-2.5 text-sm hover:bg-accent-dark"><i class="fa-solid fa-save"></i> Guardar Datos</button>
+        </div>
+
         <!-- Profile -->
         <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-user text-accent mr-2"></i>Perfil de Usuario</h3>
@@ -1957,6 +2657,16 @@ function renderSettings(el) {
               <p class="font-medium text-gray-900">${session?.username || '—'}</p>
               <p class="text-sm text-muted">Administrador</p>
             </div>
+          </div>
+        </div>
+
+        <!-- Invoice Stats -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-file-invoice text-accent mr-2"></i>Estadísticas de Facturación</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Facturas Generadas</span><span class="text-sm font-medium">${invoicesCount}</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Próximo Número</span><span class="text-sm font-medium">#${(invoiceCounter + 1).toString().padStart(6, '0')}</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Total Facturado</span><span class="text-sm font-medium text-emerald-600">${fmtCur(sales.filter(s => s.invoiceNumber).reduce((sum, s) => sum + s.total, 0))}</span></div>
           </div>
         </div>
 
@@ -1985,7 +2695,7 @@ function renderSettings(el) {
         <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-circle-info text-accent mr-2"></i>Información del Sistema</h3>
           <div class="space-y-3">
-            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Versión</span><span class="text-sm font-medium">1.0.0</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Versión</span><span class="text-sm font-medium">2.0.0</span></div>
             <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Productos</span><span class="text-sm font-medium">${products.length}</span></div>
             <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Ventas</span><span class="text-sm font-medium">${sales.length}</span></div>
             <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Gastos</span><span class="text-sm font-medium">${expenses.length}</span></div>
@@ -2001,6 +2711,20 @@ function renderSettings(el) {
         </div>
       </div>
     </div>`;
+}
+
+function saveBusinessSettings() {
+  const settings = {
+    name: $('#bizName').value.trim() || 'CoffeeWallet',
+    nit: $('#bizNit').value.trim(),
+    address: $('#bizAddress').value.trim(),
+    phone: $('#bizPhone').value.trim(),
+    email: $('#bizEmail').value.trim(),
+    resolution: $('#bizResolution').value.trim()
+  };
+  localStorage.setItem('sw_businessSettings', JSON.stringify(settings));
+  showToast('Datos del negocio guardados correctamente');
+  renderPage();
 }
 
 async function changePassword() {
