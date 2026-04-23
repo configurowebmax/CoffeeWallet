@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoffeeWallet — Inventario y Control de Café</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,200;9..40,400;9..40,500;9..40,700;9..40,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        heading: ['Space Grotesk', 'sans-serif'],
+        body: ['DM Sans', 'sans-serif'],
+      },
+      colors: {
+        accent: { DEFAULT: '#f59e0b', dark: '#d97706', light: '#fbbf24', 50: '#fffbeb' },
+        success: '#10b981',
+        danger: '#ef4444',
+        muted: '#6b7280',
+      }
+    }
+  }
+}
+</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #f9fafb; color: #111827; }
+h1,h2,h3,h4,h5,h6 { font-family: 'Space Grotesk', sans-serif; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Animations */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-up { animation: fadeUp 0.4s ease-out; }
+  .slide-in { animation: slideIn 0.3s ease-out; }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+}
+@keyframes fadeUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity:0; transform: translateX(-16px); } to { opacity:1; transform: translateX(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+/* Toast */
+.toast { animation: toastIn 0.3s ease-out; }
+@keyframes toastIn { from { opacity:0; transform: translateX(100%); } to { opacity:1; transform: translateX(0); } }
+
+/* Sidebar */
+.sidebar { width: 260px; transition: transform 0.3s ease; }
+.sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:40; }
+.sidebar-overlay.active { display:block; }
+@media (max-width: 1023px) {
+  .sidebar { position: fixed; top:0; left:0; bottom:0; z-index:50; transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+}
+
+/* Card hover */
+.card-hover { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+
+/* Nav item */
+.nav-item { transition: all 0.15s ease; border-radius: 10px; }
+.nav-item:hover { background: #fef3c7; color: #d97706; }
+.nav-item.active { background: #f59e0b; color: #fff; }
+
+/* Modal backdrop */
+.modal-backdrop { background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
+
+/* Badge */
+.badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600; }
+
+/* Input */
+input, select, textarea {
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+}
+
+/* Button base */
+.btn { cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500; border:none; border-radius:10px; transition: all 0.15s ease; display:inline-flex; align-items:center; gap:8px; }
+.btn:hover { transform:translateY(-1px); }
+.btn:active { transform:translateY(0); }
+.btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+/* Tab */
+.tab-btn { padding:8px 20px; font-weight:500; border-bottom:2px solid transparent; transition:all 0.15s ease; cursor:pointer; }
+.tab-btn.active { border-bottom-color:#f59e0b; color:#d97706; }
+.tab-btn:hover:not(.active) { color:#92400e; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-up">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-50 mb-4">
+        <i class="fa-solid fa-mug-hot text-3xl text-accent"></i>
+      </div>
+      <h1 class="text-3xl font-bold font-heading text-gray-900">CoffeeWallet</h1>
+      <p class="text-muted mt-1">Inventario y Control de Café</p>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+        <input id="loginUser" type="text" placeholder="Ingresa tu usuario" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+        <div class="relative">
+          <input id="loginPass" type="password" placeholder="Ingresa tu contraseña" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm pr-10">
+          <button onclick="togglePassVis()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><i id="passEye" class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <div id="loginError" class="hidden text-danger text-sm bg-red-50 p-3 rounded-lg"></div>
+      <button onclick="doLogin()" class="btn w-full justify-center py-3 text-white text-sm" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+        <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
+      </button>
+    </div>
+    <p class="text-center text-xs text-muted mt-6">Acceso: cafe / cafe</p>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appShell" class="hidden min-h-screen">
+  <!-- Sidebar Overlay -->
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar bg-white border-r border-gray-100 fixed top-0 left-0 bottom-0 flex flex-col z-50">
+    <div class="p-6 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+          <i class="fa-solid fa-mug-hot text-xl text-accent"></i>
+        </div>
+        <div>
+          <h2 class="font-heading font-bold text-lg text-gray-900">CoffeeWallet</h2>
+          <p class="text-xs text-muted" id="sidebarUser">cafe</p>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-4 space-y-1 overflow-y-auto" id="sidebarNav"></nav>
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="doLogout()" class="btn w-full justify-center py-2.5 text-sm text-danger bg-red-50 hover:bg-red-100">
+        <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <div class="lg:ml-[260px] min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 lg:px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleSidebar()" class="lg:hidden w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <h1 class="font-heading font-bold text-xl text-gray-900" id="pageTitle">Panel Principal</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="headerBalance" class="hidden sm:flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-medium">
+            <i class="fa-solid fa-coins"></i>
+            <span id="headerBalanceAmt">$0.00</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 p-4 lg:p-8" id="mainContent"></main>
+  </div>
+</div>
+
+<!-- MODAL CONTAINER -->
+<div id="modalContainer" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4">
+  <div id="modalContent" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto fade-in"></div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2 max-w-sm w-full"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const today = () => new Date().toISOString().split('T')[0];
+const now = () => new Date().toISOString();
+const fmtCur = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDate = d => new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtDateTime = d => new Date(d).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const currentMonth = () => today().slice(0, 7);
+
+// ═══════════════════════════════════════════
+// DATA LAYER
+// ═══════════════════════════════════════════
+const DB = {
+  get(key) { try { return JSON.parse(localStorage.getItem('sw_' + key)) || []; } catch { return []; } },
+  set(key, val) { localStorage.setItem('sw_' + key, JSON.stringify(val)); },
+  remove(key) { localStorage.removeItem('sw_' + key); }
+};
+
+// ═══════════════════════════════════════════
+// CRYPTO
+// ═══════════════════════════════════════════
+async function hashPassword(password, salt) {
+  const enc = new TextEncoder();
+  const data = enc.encode(salt + password);
+  const hashBuf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function genSalt() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function showToast(msg, type = 'success') {
+  const colors = {
+    success: 'bg-emerald-50 border-emerald-300 text-emerald-800',
+    error: 'bg-red-50 border-red-300 text-red-800',
+    warning: 'bg-amber-50 border-amber-300 text-amber-800'
+  };
+  const icons = {
+    success: 'fa-circle-check text-emerald-500',
+    error: 'fa-circle-xmark text-red-500',
+    warning: 'fa-triangle-exclamation text-amber-500'
+  };
+  const el = document.createElement('div');
+  el.className = `toast border-l-4 ${colors[type]} px-4 py-3 rounded-xl shadow-lg flex items-start gap-3 text-sm`;
+  el.innerHTML = `<i class="fa-solid ${icons[type]} mt-0.5"></i><span>${msg}</span>`;
+  $('#toastContainer').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ═══════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════
+function openModal(html, maxW = 'max-w-lg') {
+  const mc = $('#modalContent');
+  mc.className = `bg-white rounded-2xl shadow-2xl w-full ${maxW} max-h-[90vh] overflow-y-auto fade-in`;
+  mc.innerHTML = html;
+  $('#modalContainer').classList.remove('hidden');
+}
+function closeModal() { $('#modalContainer').classList.add('hidden'); }
+$('#modalContainer').addEventListener('click', e => { if (e.target === $('#modalContainer')) closeModal(); });
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+function togglePassVis() {
+  const p = $('#loginPass');
+  const eye = $('#passEye');
+  if (p.type === 'password') { p.type = 'text'; eye.className = 'fa-solid fa-eye-slash'; }
+  else { p.type = 'password'; eye.className = 'fa-solid fa-eye'; }
+}
+
+async function doLogin() {
+  const username = $('#loginUser').value.trim();
+  const password = $('#loginPass').value;
+  const errEl = $('#loginError');
+  errEl.classList.add('hidden');
+  if (!username || !password) { errEl.textContent = 'Completa todos los campos.'; errEl.classList.remove('hidden'); return; }
+  const users = DB.get('users');
+  const user = users.find(u => u.username === username);
+  if (!user) { errEl.textContent = 'Usuario no encontrado.'; errEl.classList.remove('hidden'); return; }
+  const hash = await hashPassword(password, user.salt);
+  if (hash !== user.passwordHash) { errEl.textContent = 'Contraseña incorrecta.'; errEl.classList.remove('hidden'); return; }
+  sessionStorage.setItem('sw_session', JSON.stringify({ userId: user.id, username: user.username }));
+  showApp();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('sw_session');
+  $('#appShell').classList.add('hidden');
+  $('#loginScreen').classList.remove('hidden');
+  $('#loginUser').value = '';
+  $('#loginPass').value = '';
+}
+
+$('#loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('#loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') $('#loginPass').focus(); });
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('sw_session')); } catch { return null; }
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+const navItems = [
+  { id: 'dashboard', icon: 'fa-chart-pie', label: 'Panel Principal' },
+  { id: 'wallets', icon: 'fa-wallet', label: 'Billeteras' },
+  { id: 'inventory', icon: 'fa-boxes-stacked', label: 'Inventario' },
+  { id: 'compositions', icon: 'fa-puzzle-piece', label: 'Composiciones' },
+  { id: 'buy-stock', icon: 'fa-cart-shopping', label: 'Comprar Stock' },
+  { id: 'new-sale', icon: 'fa-cash-register', label: 'Nueva Venta' },
+  { id: 'new-expense', icon: 'fa-receipt', label: 'Nuevo Gasto' },
+  { id: 'history', icon: 'fa-clock-rotate-left', label: 'Historial' },
+  { id: 'analytics', icon: 'fa-chart-line', label: 'Análisis' },
+  { id: 'settings', icon: 'fa-gear', label: 'Configuración' },
+];
+
+let currentPage = 'dashboard';
+let charts = {};
+
+function buildNav() {
+  const nav = $('#sidebarNav');
+  nav.innerHTML = navItems.map(n =>
+    `<button class="nav-item w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 ${currentPage === n.id ? 'active' : ''}" data-page="${n.id}">
+      <i class="fa-solid ${n.icon} w-5 text-center"></i> ${n.label}
+    </button>`
+  ).join('');
+  $$('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPage = btn.dataset.page;
+      buildNav();
+      renderPage();
+      updateHeader();
+      if (window.innerWidth < 1024) toggleSidebar();
+    });
+  });
+}
+
+function updateHeader() {
+  const item = navItems.find(n => n.id === currentPage);
+  $('#pageTitle').textContent = item ? item.label : '';
+  updateBalance();
+}
+
+function updateBalance() {
+  const wallets = DB.get('wallets');
+  const total = wallets.reduce((s, w) => s + w.balance, 0);
+  $('#headerBalanceAmt').textContent = fmtCur(total);
+}
+
+function toggleSidebar() {
+  const sb = $('#sidebar');
+  const ov = $('#sidebarOverlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('active');
+}
+
+// ═══════════════════════════════════════════
+// CHART MANAGEMENT
+// ═══════════════════════════════════════════
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ═══════════════════════════════════════════
+// SEED DATA
+// ═══════════════════════════════════════════
+async function seedData() {
+  if (DB.get('users').length > 0) return;
+
+  const salt = genSalt();
+  const hash = await hashPassword('cafe', salt);
+  DB.set('users', [{ id: 'usr_001', username: 'cafe', salt, passwordHash: hash, createdAt: now() }]);
+
+  DB.set('wallets', [
+    { id: 'wal_001', name: 'Efectivo', balance: 5000, color: '#10b981', createdAt: now() },
+    { id: 'wal_002', name: 'Nequi', balance: 0, color: '#8b5cf6', createdAt: now() }
+  ]);
+
+  DB.set('products', [
+    { id: 'prd_001', name: 'Café Colombiano 500g', sku: 'CAF-500', costPrice: 12000, sellingPrice: 28000, stock: 45, type: 'simple', lowStockThreshold: 10, createdAt: now() },
+    { id: 'prd_002', name: 'Café Colombiano 250g', sku: 'CAF-250', costPrice: 6800, sellingPrice: 16000, stock: 30, type: 'simple', lowStockThreshold: 8, createdAt: now() },
+    { id: 'prd_003', name: 'Café en Grano 1kg Premium', sku: 'CAF-1KG', costPrice: 22000, sellingPrice: 52000, stock: 18, type: 'simple', lowStockThreshold: 5, createdAt: now() },
+    { id: 'prd_004', name: 'Café Vainilla 500g', sku: 'CAF-VAN', costPrice: 14500, sellingPrice: 32000, stock: 12, type: 'simple', lowStockThreshold: 5, createdAt: now() },
+    { id: 'prd_005', name: 'Café Avellana 500g', sku: 'CAF-AVE', costPrice: 15000, sellingPrice: 34000, stock: 10, type: 'simple', lowStockThreshold: 5, createdAt: now() },
+    { id: 'prd_006', name: 'Café Chocolate 500g', sku: 'CAF-CHO', costPrice: 14800, sellingPrice: 33000, stock: 8, type: 'simple', lowStockThreshold: 5, createdAt: now() },
+    { id: 'prd_007', name: 'Café Descafeinado 500g', sku: 'CAF-DES', costPrice: 14000, sellingPrice: 30000, stock: 15, type: 'simple', lowStockThreshold: 5, createdAt: now() },
+    { id: 'prd_008', name: 'Grano de Café Colombiano x1kg', sku: 'INS-GCA', costPrice: 18500, sellingPrice: 0, stock: 80, type: 'insumo', lowStockThreshold: 15, createdAt: now() },
+    { id: 'prd_009', name: 'Empaque Aluminio 500g', sku: 'INS-EA5', costPrice: 1800, sellingPrice: 0, stock: 200, type: 'insumo', lowStockThreshold: 30, createdAt: now() },
+    { id: 'prd_010', name: 'Empaque Aluminio 250g', sku: 'INS-EA2', costPrice: 1200, sellingPrice: 0, stock: 200, type: 'insumo', lowStockThreshold: 30, createdAt: now() },
+    { id: 'prd_011', name: 'Saborizante Vainilla', sku: 'INS-VAN', costPrice: 2200, sellingPrice: 0, stock: 60, type: 'insumo', lowStockThreshold: 10, createdAt: now() },
+    { id: 'prd_012', name: 'Saborizante Avellana', sku: 'INS-AVE', costPrice: 2500, sellingPrice: 0, stock: 50, type: 'insumo', lowStockThreshold: 10, createdAt: now() },
+    { id: 'prd_013', name: 'Saborizante Chocolate', sku: 'INS-CHO', costPrice: 2000, sellingPrice: 0, stock: 55, type: 'insumo', lowStockThreshold: 10, createdAt: now() },
+    { id: 'prd_014', name: 'Etiqueta Adhesiva', sku: 'INS-ETI', costPrice: 600, sellingPrice: 0, stock: 500, type: 'insumo', lowStockThreshold: 50, createdAt: now() },
+    { id: 'prd_015', name: 'Válvula Degradable One-Way', sku: 'INS-VAL', costPrice: 350, sellingPrice: 0, stock: 300, type: 'insumo', lowStockThreshold: 40, createdAt: now() }
+  ]);
+
+  DB.set('compositions', [
+    { id: 'cmp_001', parentId: 'prd_001', componentId: 'prd_008', quantity: 1 },
+    { id: 'cmp_002', parentId: 'prd_001', componentId: 'prd_009', quantity: 1 },
+    { id: 'cmp_003', parentId: 'prd_001', componentId: 'prd_014', quantity: 1 },
+    { id: 'cmp_004', parentId: 'prd_001', componentId: 'prd_015', quantity: 1 },
+    { id: 'cmp_005', parentId: 'prd_002', componentId: 'prd_008', quantity: 1 },
+    { id: 'cmp_006', parentId: 'prd_002', componentId: 'prd_010', quantity: 1 },
+    { id: 'cmp_007', parentId: 'prd_002', componentId: 'prd_014', quantity: 1 },
+    { id: 'cmp_008', parentId: 'prd_002', componentId: 'prd_015', quantity: 1 },
+    { id: 'cmp_009', parentId: 'prd_004', componentId: 'prd_008', quantity: 1 },
+    { id: 'cmp_010', parentId: 'prd_004', componentId: 'prd_009', quantity: 1 },
+    { id: 'cmp_011', parentId: 'prd_004', componentId: 'prd_011', quantity: 1 },
+    { id: 'cmp_012', parentId: 'prd_004', componentId: 'prd_014', quantity: 1 },
+    { id: 'cmp_013', parentId: 'prd_004', componentId: 'prd_015', quantity: 1 },
+    { id: 'cmp_014', parentId: 'prd_005', componentId: 'prd_008', quantity: 1 },
+    { id: 'cmp_015', parentId: 'prd_005', componentId: 'prd_009', quantity: 1 },
+    { id: 'cmp_016', parentId: 'prd_005', componentId: 'prd_012', quantity: 1 },
+    { id: 'cmp_017', parentId: 'prd_005', componentId: 'prd_014', quantity: 1 },
+    { id: 'cmp_018', parentId: 'prd_005', componentId: 'prd_015', quantity: 1 },
+    { id: 'cmp_019', parentId: 'prd_006', componentId: 'prd_008', quantity: 1 },
+    { id: 'cmp_020', parentId: 'prd_006', componentId: 'prd_009', quantity: 1 },
+    { id: 'cmp_021', parentId: 'prd_006', componentId: 'prd_013', quantity: 1 },
+    { id: 'cmp_022', parentId: 'prd_006', componentId: 'prd_014', quantity: 1 },
+    { id: 'cmp_023', parentId: 'prd_006', componentId: 'prd_015', quantity: 1 }
+  ]);
+
+  DB.set('sales', []);
+  DB.set('expenses', []);
+  DB.set('purchases', []);
+  DB.set('walletOps', []);
+}
+
+// ═══════════════════════════════════════════
+// PAGE ROUTER
+// ═══════════════════════════════════════════
+function renderPage() {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+  const content = $('#mainContent');
+  switch (currentPage) {
+    case 'dashboard': renderDashboard(content); break;
+    case 'wallets': renderWallets(content); break;
+    case 'inventory': renderInventory(content); break;
+    case 'compositions': renderCompositions(content); break;
+    case 'buy-stock': renderBuyStock(content); break;
+    case 'new-sale': renderNewSale(content); break;
+    case 'new-expense': renderNewExpense(content); break;
+    case 'history': renderHistory(content); break;
+    case 'analytics': renderAnalytics(content); break;
+    case 'settings': renderSettings(content); break;
+  }
+}
+
+// ═══════════════════════════════════════════
+// 1. DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard(el) {
+  const wallets = DB.get('wallets');
+  const sales = DB.get('sales');
+  const expenses = DB.get('expenses');
+  const products = DB.get('products');
+  const compositions = DB.get('compositions');
+  const t = today();
+  const totalBalance = wallets.reduce((s, w) => s + w.balance, 0);
+  const todaySales = sales.filter(s => s.date.startsWith(t)).reduce((sum, s) => sum + s.total, 0);
+  const todayExpenses = expenses.filter(e => e.date.startsWith(t)).reduce((sum, e) => sum + e.amount, 0);
+  const todayCosts = sales.filter(s => s.date.startsWith(t)).reduce((sum, s) => sum + s.totalCost, 0);
+  const todayProfit = todaySales - todayCosts;
+
+  const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold);
+
+  // Recent transactions
+  const allTx = [
+    ...sales.map(s => ({ ...s, _type: 'sale', _date: s.date })),
+    ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.date })),
+    ...DB.get('purchases').map(p => ({ ...p, _type: 'purchase', _date: p.date }))
+  ].sort((a, b) => b._date.localeCompare(a._date)).slice(0, 8);
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-muted font-medium">Saldo Total</span>
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"><i class="fa-solid fa-coins text-emerald-500"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading text-gray-900">${fmtCur(totalBalance)}</p>
+          <p class="text-xs text-muted mt-1">${wallets.length} billetera(s)</p>
+        </div>
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover" style="animation-delay:0.05s">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-muted font-medium">Ventas de Hoy</span>
+            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center"><i class="fa-solid fa-arrow-trend-up text-blue-500"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading text-gray-900">${fmtCur(todaySales)}</p>
+          <p class="text-xs text-muted mt-1">${sales.filter(s => s.date.startsWith(t)).length} venta(s)</p>
+        </div>
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover" style="animation-delay:0.1s">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-muted font-medium">Gastos de Hoy</span>
+            <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center"><i class="fa-solid fa-arrow-trend-down text-red-500"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading text-gray-900">${fmtCur(todayExpenses)}</p>
+          <p class="text-xs text-muted mt-1">${expenses.filter(e => e.date.startsWith(t)).length} gasto(s)</p>
+        </div>
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover" style="animation-delay:0.15s">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-muted font-medium">Ganancia de Hoy</span>
+            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><i class="fa-solid fa-sack-dollar text-amber-500"></i></div>
+          </div>
+          <p class="text-2xl font-bold font-heading ${todayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}">${fmtCur(todayProfit)}</p>
+          <p class="text-xs text-muted mt-1">Costo: ${fmtCur(todayCosts)}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart -->
+        <div class="lg:col-span-2 fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Últimos 7 Días</h3>
+          <div style="height:280px"><canvas id="dashChart"></canvas></div>
+        </div>
+
+        <!-- Wallets -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Billeteras</h3>
+          <div class="space-y-3">
+            ${wallets.map(w => `
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+                <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:${w.color}"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">${w.name}</p>
+                  <p class="text-xs text-muted">${fmtCur(w.balance)}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Low Stock Alerts -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2"></i>Alertas de Stock Bajo</h3>
+          <div class="max-h-64 overflow-y-auto space-y-2">
+            ${lowStockProducts.length === 0 ? '<p class="text-sm text-muted text-center py-4">Sin alertas de stock bajo</p>' :
+              lowStockProducts.map(p => {
+                const compCount = compositions.filter(c => c.parentId === p.id).length;
+                return `<div class="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-100">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">${p.name}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="badge ${p.type === 'simple' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${p.type === 'simple' ? 'Producto' : 'Insumo'}</span>
+                      ${compCount > 0 ? '<span class="badge bg-purple-100 text-purple-700">Compuesto</span>' : ''}
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="text-sm font-bold text-red-600">${p.stock}</p>
+                    <p class="text-xs text-muted">mín: ${p.lowStockThreshold}</p>
+                  </div>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Transacciones Recientes</h3>
+          <div class="max-h-64 overflow-y-auto space-y-2">
+            ${allTx.length === 0 ? '<p class="text-sm text-muted text-center py-4">Sin transacciones</p>' :
+              allTx.map(tx => {
+                const colors = { sale: 'text-emerald-600 bg-emerald-50', expense: 'text-red-600 bg-red-50', purchase: 'text-amber-600 bg-amber-50' };
+                const icons = { sale: 'fa-cart-shopping', expense: 'fa-receipt', purchase: 'fa-box' };
+                const labels = { sale: 'Venta', expense: 'Gasto', purchase: 'Compra' };
+                const amounts = { sale: fmtCur(tx.total), expense: fmtCur(tx.amount), purchase: fmtCur(tx.totalCost) };
+                const descs = { sale: tx.items ? tx.items.map(i => i.productName).join(', ') : '', expense: tx.description || '', purchase: tx.productName || '' };
+                return `<div class="flex items-center gap-3 p-3 rounded-xl ${colors[tx._type]}">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fa-solid ${icons[tx._type]} text-xs"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">${labels[tx._type]}: ${descs[tx._type]}</p>
+                    <p class="text-xs opacity-70">${fmtDateTime(tx._date)}</p>
+                  </div>
+                  <span class="text-sm font-bold flex-shrink-0">${amounts[tx._type]}</span>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Chart
+  buildDashChart();
+}
+
+function buildDashChart() {
+  const labels = [];
+  const salesData = [];
+  const expData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    labels.push(d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }));
+    const daySales = DB.get('sales').filter(s => s.date.startsWith(ds)).reduce((sum, s) => sum + s.total, 0);
+    const dayExp = DB.get('expenses').filter(e => e.date.startsWith(ds)).reduce((sum, e) => sum + e.amount, 0);
+    salesData.push(daySales);
+    expData.push(dayExp);
+  }
+  const ctx = document.getElementById('dashChart');
+  if (!ctx) return;
+  charts['dash'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Ventas', data: salesData, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 8 },
+        { label: 'Gastos', data: expData, backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 8 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } }, x: { grid: { display: false } } }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// 2. WALLETS
+// ═══════════════════════════════════════════
+function renderWallets(el) {
+  const wallets = DB.get('wallets');
+  const ops = DB.get('walletOps').sort((a, b) => b.date.localeCompare(a.date));
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="font-heading font-semibold text-lg text-gray-900">Mis Billeteras</h2>
+        <div class="flex gap-2">
+          <button onclick="openRechargeModal()" class="btn bg-emerald-50 text-emerald-700 px-4 py-2.5 text-sm hover:bg-emerald-100"><i class="fa-solid fa-plus"></i> Recargar</button>
+          <button onclick="openTransferModal()" class="btn bg-purple-50 text-purple-700 px-4 py-2.5 text-sm hover:bg-purple-100"><i class="fa-solid fa-right-left"></i> Transferir</button>
+          <button onclick="openCreateWalletModal()" class="btn bg-accent text-white px-4 py-2.5 text-sm hover:bg-accent-dark"><i class="fa-solid fa-plus"></i> Nueva</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        ${wallets.map(w => `
+          <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden card-hover" style="border-top:4px solid ${w.color}">
+            <div class="p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-heading font-semibold text-gray-900">${w.name}</h3>
+                <div class="flex gap-1">
+                  <button onclick="openEditWalletModal('${w.id}')" class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xs"><i class="fa-solid fa-pen"></i></button>
+                  <button onclick="deleteWallet('${w.id}')" class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+              <p class="text-2xl font-bold font-heading text-gray-900">${fmtCur(w.balance)}</p>
+              <p class="text-xs text-muted mt-1">Creada: ${fmtDate(w.createdAt)}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <!-- Operations History -->
+      <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-heading font-semibold text-gray-900 mb-4">Historial de Operaciones</h3>
+        <div class="max-h-96 overflow-y-auto">
+          ${ops.length === 0 ? '<p class="text-sm text-muted text-center py-4">Sin operaciones</p>' :
+            `<table class="w-full text-sm">
+              <thead><tr class="text-left text-muted border-b border-gray-100">
+                <th class="pb-3 font-medium">Tipo</th><th class="pb-3 font-medium">Detalle</th><th class="pb-3 font-medium">Monto</th><th class="pb-3 font-medium">Fecha</th>
+              </tr></thead>
+              <tbody>${ops.map(o => {
+                const w = wallets.find(x => x.id === o.walletId || o.fromWalletId || o.toWalletId);
+                const label = o.type === 'recharge' ? 'Recarga' : 'Transferencia';
+                const detail = o.type === 'recharge' ? (w ? w.name : '') : `${wallets.find(x => x.id === o.fromWalletId)?.name || ''} → ${wallets.find(x => x.id === o.toWalletId)?.name || ''}`;
+                return `<tr class="border-b border-gray-50"><td class="py-3"><span class="badge ${o.type === 'recharge' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700'}">${label}</span></td><td class="py-3 text-gray-700">${detail}</td><td class="py-3 font-semibold ${o.type === 'recharge' ? 'text-emerald-600' : 'text-purple-600'}">${fmtCur(o.amount)}</td><td class="py-3 text-muted">${fmtDateTime(o.date)}</td></tr>`;
+              }).join('')}</tbody>
+            </table>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+const walletColors = ['#10b981','#8b5cf6','#f59e0b','#ef4444','#3b82f6','#ec4899','#06b6d4','#84cc16'];
+
+function openCreateWalletModal() {
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">Nueva Billetera</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+          <input id="mWalletName" type="text" placeholder="Nombre de la billetera" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+          <div class="flex gap-2" id="mWalletColors">
+            ${walletColors.map((c, i) => `<button onclick="selectWalletColor('${c}',this)" class="w-10 h-10 rounded-xl border-2 ${i === 0 ? 'border-gray-900 scale-110' : 'border-transparent'} transition-all" style="background:${c}" data-color="${c}"></button>`).join('')}
+          </div>
+          <input type="hidden" id="mWalletColor" value="${walletColors[0]}">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="createWallet()" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark">Crear</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function selectWalletColor(color, btn) {
+  $('#mWalletColor').value = color;
+  $$('#mWalletColors button').forEach(b => { b.classList.remove('border-gray-900', 'scale-110'); b.classList.add('border-transparent'); });
+  btn.classList.add('border-gray-900', 'scale-110');
+  btn.classList.remove('border-transparent');
+}
+
+function createWallet() {
+  const name = $('#mWalletName').value.trim();
+  const color = $('#mWalletColor').value;
+  if (!name) { showToast('Ingresa un nombre', 'warning'); return; }
+  const wallets = DB.get('wallets');
+  wallets.push({ id: genId(), name, balance: 0, color, createdAt: now() });
+  DB.set('wallets', wallets);
+  closeModal();
+  showToast('Billetera creada exitosamente');
+  renderPage(); updateBalance();
+}
+
+function openEditWalletModal(id) {
+  const wallets = DB.get('wallets');
+  const w = wallets.find(x => x.id === id);
+  if (!w) return;
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">Editar Billetera</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+          <input id="mEditWalletName" type="text" value="${w.name}" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+          <div class="flex gap-2" id="mEditWalletColors">
+            ${walletColors.map(c => `<button onclick="selectWalletColor2('${c}',this)" class="w-10 h-10 rounded-xl border-2 ${c === w.color ? 'border-gray-900 scale-110' : 'border-transparent'} transition-all" style="background:${c}" data-color="${c}"></button>`).join('')}
+          </div>
+          <input type="hidden" id="mEditWalletColor" value="${w.color}">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="editWallet('${id}')" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark">Guardar</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function selectWalletColor2(color, btn) {
+  $('#mEditWalletColor').value = color;
+  $$('#mEditWalletColors button').forEach(b => { b.classList.remove('border-gray-900', 'scale-110'); b.classList.add('border-transparent'); });
+  btn.classList.add('border-gray-900', 'scale-110');
+  btn.classList.remove('border-transparent');
+}
+
+function editWallet(id) {
+  const name = $('#mEditWalletName').value.trim();
+  const color = $('#mEditWalletColor').value;
+  if (!name) { showToast('Ingresa un nombre', 'warning'); return; }
+  const wallets = DB.get('wallets');
+  const w = wallets.find(x => x.id === id);
+  if (w) { w.name = name; w.color = color; }
+  DB.set('wallets', wallets);
+  closeModal();
+  showToast('Billetera actualizada');
+  renderPage(); updateBalance();
+}
+
+function deleteWallet(id) {
+  const wallets = DB.get('wallets');
+  const w = wallets.find(x => x.id === id);
+  if (!w) return;
+  if (w.balance !== 0) { showToast('Solo se puede eliminar billeteras con saldo $0.00', 'error'); return; }
+  openModal(`
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-trash text-2xl text-red-500"></i></div>
+      <h3 class="font-heading font-semibold text-lg mb-2">Eliminar Billetera</h3>
+      <p class="text-sm text-muted mb-6">¿Estás seguro de eliminar <strong>${w.name}</strong>? Esta acción no se puede deshacer.</p>
+      <div class="flex gap-2">
+        <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+        <button onclick="confirmDeleteWallet('${id}')" class="btn flex-1 justify-center py-2.5 text-sm bg-danger text-white hover:bg-red-600">Eliminar</button>
+      </div>
+    </div>`, 'max-w-sm');
+}
+
+function confirmDeleteWallet(id) {
+  const wallets = DB.get('wallets').filter(w => w.id !== id);
+  DB.set('wallets', wallets);
+  closeModal();
+  showToast('Billetera eliminada');
+  renderPage(); updateBalance();
+}
+
+function openRechargeModal() {
+  const wallets = DB.get('wallets');
+  if (wallets.length === 0) { showToast('Crea una billetera primero', 'warning'); return; }
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">Recargar Billetera</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Billetera</label>
+          <select id="mRechargeWallet" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            ${wallets.map(w => `<option value="${w.id}">${w.name} (${fmtCur(w.balance)})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+          <input id="mRechargeAmount" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="doRecharge()" class="btn flex-1 justify-center py-2.5 text-sm bg-emerald-600 text-white hover:bg-emerald-700"><i class="fa-solid fa-plus"></i> Recargar</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function doRecharge() {
+  const walletId = $('#mRechargeWallet').value;
+  const amount = parseFloat($('#mRechargeAmount').value);
+  if (!amount || amount <= 0) { showToast('Ingresa un monto válido', 'warning'); return; }
+  const wallets = DB.get('wallets');
+  const w = wallets.find(x => x.id === walletId);
+  if (w) w.balance += amount;
+  DB.set('wallets', wallets);
+  const ops = DB.get('walletOps');
+  ops.push({ id: genId(), type: 'recharge', walletId, amount, date: now() });
+  DB.set('walletOps', ops);
+  closeModal();
+  showToast('Recarga exitosa: +' + fmtCur(amount));
+  renderPage(); updateBalance();
+}
+
+function openTransferModal() {
+  const wallets = DB.get('wallets');
+  if (wallets.length < 2) { showToast('Necesitas al menos 2 billeteras', 'warning'); return; }
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">Transferir entre Billeteras</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+          <select id="mTransferFrom" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            ${wallets.map(w => `<option value="${w.id}">${w.name} (${fmtCur(w.balance)})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Hacia</label>
+          <select id="mTransferTo" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            ${wallets.map((w, i) => `<option value="${w.id}" ${i === 1 ? 'selected' : ''}>${w.name} (${fmtCur(w.balance)})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+          <input id="mTransferAmount" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="doTransfer()" class="btn flex-1 justify-center py-2.5 text-sm bg-purple-600 text-white hover:bg-purple-700"><i class="fa-solid fa-right-left"></i> Transferir</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function doTransfer() {
+  const fromId = $('#mTransferFrom').value;
+  const toId = $('#mTransferTo').value;
+  const amount = parseFloat($('#mTransferAmount').value);
+  if (!amount || amount <= 0) { showToast('Ingresa un monto válido', 'warning'); return; }
+  if (fromId === toId) { showToast('Selecciona billeteras diferentes', 'warning'); return; }
+  const wallets = DB.get('wallets');
+  const from = wallets.find(w => w.id === fromId);
+  const to = wallets.find(w => w.id === toId);
+  if (from.balance < amount) { showToast('Saldo insuficiente en ' + from.name, 'error'); return; }
+  from.balance -= amount;
+  to.balance += amount;
+  DB.set('wallets', wallets);
+  const ops = DB.get('walletOps');
+  ops.push({ id: genId(), type: 'transfer', fromWalletId: fromId, toWalletId: toId, amount, date: now() });
+  DB.set('walletOps', ops);
+  closeModal();
+  showToast('Transferencia exitosa: ' + fmtCur(amount));
+  renderPage(); updateBalance();
+}
+
+// ═══════════════════════════════════════════
+// 3. INVENTORY
+// ═══════════════════════════════════════════
+let invTab = 'simple';
+let invSearch = '';
+
+function renderInventory(el) {
+  const products = DB.get('products');
+  const compositions = DB.get('compositions');
+  const filtered = products.filter(p => {
+    const matchTab = invTab === 'simple' ? p.type === 'simple' : p.type === 'insumo';
+    const matchSearch = !invSearch || p.name.toLowerCase().includes(invSearch.toLowerCase()) || p.sku.toLowerCase().includes(invSearch.toLowerCase());
+    return matchTab && matchSearch;
+  });
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="font-heading font-semibold text-lg text-gray-900">Inventario</h2>
+          <p class="text-sm text-muted">${products.length} producto(s) total</p>
+        </div>
+        <button onclick="openProductModal()" class="btn bg-accent text-white px-4 py-2.5 text-sm hover:bg-accent-dark"><i class="fa-solid fa-plus"></i> Nuevo Producto</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-200">
+        <button class="tab-btn ${invTab === 'simple' ? 'active' : ''} text-sm" onclick="invTab='simple';renderPage()">Productos Vendibles (${products.filter(p => p.type === 'simple').length})</button>
+        <button class="tab-btn ${invTab === 'insumo' ? 'active' : ''} text-sm" onclick="invTab='insumo';renderPage()">Insumos (${products.filter(p => p.type === 'insumo').length})</button>
+      </div>
+
+      <!-- Search -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" placeholder="Buscar por nombre o SKU..." value="${invSearch}" oninput="invSearch=this.value;renderPage()" class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white">
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50 text-left text-muted">
+              <th class="px-4 py-3 font-medium">Nombre</th>
+              <th class="px-4 py-3 font-medium">SKU</th>
+              <th class="px-4 py-3 font-medium">Costo</th>
+              ${invTab === 'simple' ? '<th class="px-4 py-3 font-medium">Precio Venta</th><th class="px-4 py-3 font-medium">Margen</th>' : ''}
+              <th class="px-4 py-3 font-medium">Stock</th>
+              <th class="px-4 py-3 font-medium">Mín</th>
+              <th class="px-4 py-3 font-medium">Acciones</th>
+            </tr></thead>
+            <tbody>
+              ${filtered.length === 0 ? `<tr><td colspan="7" class="px-4 py-8 text-center text-muted">Sin productos</td></tr>` :
+                filtered.map(p => {
+                  const compCount = compositions.filter(c => c.parentId === p.id).length;
+                  const isLow = p.stock <= p.lowStockThreshold;
+                  const margin = p.sellingPrice > 0 ? ((p.sellingPrice - p.costPrice) / p.sellingPrice * 100).toFixed(0) : 0;
+                  return `<tr class="border-t border-gray-50 hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-gray-900">${p.name}</span>
+                        <span class="badge ${p.type === 'simple' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${p.type === 'simple' ? 'Producto' : 'Insumo'}</span>
+                        ${compCount > 0 ? '<span class="badge bg-purple-100 text-purple-700">Compuesto</span>' : ''}
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-muted">${p.sku}</td>
+                    <td class="px-4 py-3">${fmtCur(p.costPrice)}</td>
+                    ${invTab === 'simple' ? `<td class="px-4 py-3">${fmtCur(p.sellingPrice)}</td><td class="px-4 py-3"><span class="text-emerald-600 font-medium">${margin}%</span></td>` : ''}
+                    <td class="px-4 py-3"><span class="font-semibold ${isLow ? 'text-red-600' : 'text-gray-900'}">${p.stock}</span></td>
+                    <td class="px-4 py-3 text-muted">${p.lowStockThreshold}</td>
+                    <td class="px-4 py-3">
+                      <div class="flex gap-1">
+                        <button onclick="openProductModal('${p.id}')" class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xs"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteProduct('${p.id}')" class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 text-xs"><i class="fa-solid fa-trash"></i></button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openProductModal(editId) {
+  const products = DB.get('products');
+  const p = editId ? products.find(x => x.id === editId) : null;
+  const isEdit = !!p;
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">${isEdit ? 'Editar' : 'Nuevo'} Producto</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+          <select id="mProdType" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            <option value="simple" ${p && p.type === 'simple' ? 'selected' : ''}>Producto Vendible</option>
+            <option value="insumo" ${p && p.type === 'insumo' ? 'selected' : ''}>Insumo (Materia Prima)</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input id="mProdName" type="text" value="${p ? p.name : ''}" placeholder="Nombre del producto" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+            <input id="mProdSku" type="text" value="${p ? p.sku : ''}" placeholder="SKU" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio Costo</label>
+            <input id="mProdCost" type="number" min="0" step="0.01" value="${p ? p.costPrice : ''}" placeholder="0.00" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio Venta</label>
+            <input id="mProdSell" type="number" min="0" step="0.01" value="${p && p.sellingPrice ? p.sellingPrice : ''}" placeholder="0.00" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+            <input id="mProdStock" type="number" min="0" value="${p ? p.stock : '0'}" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Umbral Stock Bajo</label>
+          <input id="mProdThreshold" type="number" min="0" value="${p ? p.lowStockThreshold : '10'}" placeholder="10" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          <p class="text-xs text-muted mt-1">Se mostrará alerta cuando el stock sea igual o menor a este valor</p>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="saveProduct('${editId || ''}')" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark">${isEdit ? 'Guardar' : 'Crear'}</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function saveProduct(editId) {
+  const type = $('#mProdType').value;
+  const name = $('#mProdName').value.trim();
+  const sku = $('#mProdSku').value.trim();
+  const costPrice = parseFloat($('#mProdCost').value) || 0;
+  const sellingPrice = parseFloat($('#mProdSell').value) || 0;
+  const stock = parseInt($('#mProdStock').value) || 0;
+  const lowStockThreshold = parseInt($('#mProdThreshold').value) || 10;
+
+  if (!name) { showToast('Ingresa un nombre', 'warning'); return; }
+  if (!sku) { showToast('Ingresa un SKU', 'warning'); return; }
+
+  const products = DB.get('products');
+
+  // Check unique SKU
+  const existingSku = products.find(p => p.sku === sku && p.id !== editId);
+  if (existingSku) { showToast('SKU ya existe', 'error'); return; }
+
+  if (editId) {
+    const p = products.find(x => x.id === editId);
+    if (p) { Object.assign(p, { type, name, sku, costPrice, sellingPrice, stock, lowStockThreshold }); }
+  } else {
+    products.push({ id: genId(), type, name, sku, costPrice, sellingPrice, stock, lowStockThreshold, createdAt: now() });
+  }
+  DB.set('products', products);
+  closeModal();
+  showToast(editId ? 'Producto actualizado' : 'Producto creado');
+  renderPage();
+}
+
+function deleteProduct(id) {
+  const products = DB.get('products');
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  // Check if product is used in compositions as component
+  const comps = DB.get('compositions');
+  const usedAsComp = comps.find(c => c.componentId === id);
+  if (usedAsComp) { showToast('Este producto es componente de otro y no se puede eliminar', 'error'); return; }
+  openModal(`
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-trash text-2xl text-red-500"></i></div>
+      <h3 class="font-heading font-semibold text-lg mb-2">Eliminar Producto</h3>
+      <p class="text-sm text-muted mb-6">¿Eliminar <strong>${p.name}</strong>?</p>
+      <div class="flex gap-2">
+        <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+        <button onclick="confirmDeleteProduct('${id}')" class="btn flex-1 justify-center py-2.5 text-sm bg-danger text-white hover:bg-red-600">Eliminar</button>
+      </div>
+    </div>`, 'max-w-sm');
+}
+
+function confirmDeleteProduct(id) {
+  let products = DB.get('products').filter(p => p.id !== id);
+  DB.set('products', products);
+  // Also remove compositions where this is parent
+  let comps = DB.get('compositions').filter(c => c.parentId !== id);
+  DB.set('compositions', comps);
+  closeModal();
+  showToast('Producto eliminado');
+  renderPage();
+}
+
+// ═══════════════════════════════════════════
+// 4. COMPOSITIONS
+// ═══════════════════════════════════════════
+let selectedCompProduct = null;
+
+function renderCompositions(el) {
+  const products = DB.get('products');
+  const comps = DB.get('compositions');
+  const simpleProducts = products.filter(p => p.type === 'simple');
+
+  const selectedComps = selectedCompProduct ? comps.filter(c => c.parentId === selectedCompProduct) : [];
+  const selectedProduct = selectedCompProduct ? products.find(p => p.id === selectedCompProduct) : null;
+  const estimatedCost = selectedComps.reduce((sum, c) => {
+    const comp = products.find(p => p.id === c.componentId);
+    return sum + (comp ? comp.costPrice * c.quantity : 0);
+  }, 0);
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <h2 class="font-heading font-semibold text-lg text-gray-900">Composiciones de Productos</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Product List -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Productos Vendibles</h3>
+          <div class="max-h-[500px] overflow-y-auto space-y-2">
+            ${simpleProducts.length === 0 ? '<p class="text-sm text-muted text-center py-4">Sin productos vendibles</p>' :
+              simpleProducts.map(p => {
+                const compCount = comps.filter(c => c.parentId === p.id).length;
+                const isSelected = selectedCompProduct === p.id;
+                return `<button onclick="selectedCompProduct='${p.id}';renderPage()" class="w-full text-left flex items-center gap-3 p-3 rounded-xl transition-all ${isSelected ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 hover:bg-gray-100 border border-transparent'}">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">${p.name}</p>
+                    <p class="text-xs text-muted">${p.sku}</p>
+                  </div>
+                  <span class="badge ${compCount > 0 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}">${compCount} comp.</span>
+                </button>`;
+              }).join('')}
+          </div>
+        </div>
+
+        <!-- Composition Detail -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          ${!selectedProduct ? `
+            <div class="flex flex-col items-center justify-center py-16 text-center">
+              <div class="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4"><i class="fa-solid fa-puzzle-piece text-2xl text-gray-300"></i></div>
+              <p class="text-muted text-sm">Selecciona un producto para ver sus componentes</p>
+            </div>
+          ` : `
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-heading font-semibold text-gray-900">${selectedProduct.name}</h3>
+                <p class="text-sm text-muted">${selectedProduct.sku} · Precio venta: ${fmtCur(selectedProduct.sellingPrice)}</p>
+              </div>
+              <button onclick="openAddCompModal('${selectedProduct.id}')" class="btn bg-accent text-white px-3 py-2 text-sm hover:bg-accent-dark"><i class="fa-solid fa-plus"></i> Agregar</button>
+            </div>
+            ${selectedComps.length === 0 ? `
+              <div class="flex flex-col items-center justify-center py-12 text-center">
+                <div class="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4"><i class="fa-solid fa-cubes text-2xl text-gray-300"></i></div>
+                <p class="text-muted text-sm">Sin componentes. Agrega insumos a este producto.</p>
+              </div>
+            ` : `
+              <div class="space-y-3 mb-4">
+                ${selectedComps.map(c => {
+                  const comp = products.find(p => p.id === c.componentId);
+                  if (!comp) return '';
+                  const subtotal = comp.costPrice * c.quantity;
+                  return `<div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-900">${comp.name}</p>
+                      <p class="text-xs text-muted">${comp.sku} · Stock: <span class="${comp.stock <= comp.lowStockThreshold ? 'text-red-600 font-semibold' : ''}">${comp.stock}</span></p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-semibold text-gray-900">${c.quantity} uds</p>
+                      <p class="text-xs text-muted">${fmtCur(comp.costPrice)} c/u</p>
+                    </div>
+                    <div class="text-right w-20">
+                      <p class="text-sm font-semibold text-accent-dark">${fmtCur(subtotal)}</p>
+                      <p class="text-xs text-muted">subtotal</p>
+                    </div>
+                    <button onclick="removeComp('${c.id}')" class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 text-xs flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+                  </div>`;
+                }).join('')}
+              </div>
+              <div class="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-amber-800">Costo Estimado (insumos)</span>
+                  <span class="text-lg font-bold text-amber-900">${fmtCur(estimatedCost)}</span>
+                </div>
+                ${selectedProduct.sellingPrice > 0 ? `<p class="text-xs text-amber-700 mt-1">Margen: ${fmtCur(selectedProduct.sellingPrice - estimatedCost)} (${((selectedProduct.sellingPrice - estimatedCost) / selectedProduct.sellingPrice * 100).toFixed(1)}%)</p>` : ''}
+              </div>
+            `}
+          `}
+        </div>
+      </div>
+    </div>`;
+}
+
+function openAddCompModal(parentId) {
+  const products = DB.get('products');
+  const comps = DB.get('compositions');
+  const existingCompIds = comps.filter(c => c.parentId === parentId).map(c => c.componentId);
+  const availableInsumos = products.filter(p => p.type === 'insumo' && !existingCompIds.includes(p.id));
+
+  if (availableInsumos.length === 0) { showToast('No hay insumos disponibles para agregar', 'warning'); return; }
+
+  openModal(`
+    <div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-4">Agregar Componente</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Insumo</label>
+          <select id="mCompInsumo" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            ${availableInsumos.map(i => `<option value="${i.id}">${i.name} (${i.sku}) — Stock: ${i.stock} — ${fmtCur(i.costPrice)}/u</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad por unidad</label>
+          <input id="mCompQty" type="number" min="1" value="1" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+          <p class="text-xs text-muted mt-1">¿Cuántas unidades de este insumo se necesitan por 1 unidad del producto?</p>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+          <button onclick="addComp('${parentId}')" class="btn flex-1 justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark">Agregar</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function addComp(parentId) {
+  const componentId = $('#mCompInsumo').value;
+  const quantity = parseInt($('#mCompQty').value) || 0;
+  if (!componentId || quantity <= 0) { showToast('Datos inválidos', 'warning'); return; }
+  const comps = DB.get('compositions');
+  comps.push({ id: genId(), parentId, componentId, quantity });
+  DB.set('compositions', comps);
+  closeModal();
+  showToast('Componente agregado');
+  renderPage();
+}
+
+function removeComp(compId) {
+  let comps = DB.get('compositions').filter(c => c.id !== compId);
+  DB.set('compositions', comps);
+  showToast('Componente eliminado');
+  renderPage();
+}
+
+// ═══════════════════════════════════════════
+// 5. BUY STOCK
+// ═══════════════════════════════════════════
+function renderBuyStock(el) {
+  const products = DB.get('products');
+  const wallets = DB.get('wallets');
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <h2 class="font-heading font-semibold text-lg text-gray-900">Comprar Stock</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Nueva Compra</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+              <select id="buyProduct" onchange="onBuyProductChange()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+                <option value="">Seleccionar producto...</option>
+                ${products.map(p => `<option value="${p.id}" data-cost="${p.costPrice}" data-type="${p.type}">${p.name} (${p.sku}) — Stock: ${p.stock} — ${p.type === 'simple' ? 'Producto' : 'Insumo'}</option>`).join('')}
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                <input id="buyQty" type="number" min="1" value="1" oninput="onBuyQtyChange()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Costo Unitario</label>
+                <input id="buyUnitCost" type="number" min="0" step="0.01" value="" oninput="onBuyQtyChange()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Total</label>
+              <div id="buyTotal" class="px-4 py-2.5 bg-gray-50 rounded-xl text-sm font-semibold text-gray-900">${fmtCur(0)}</div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Pagar con</label>
+              <select id="buyWallet" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+                ${wallets.map(w => `<option value="${w.id}">${w.name} (${fmtCur(w.balance)})</option>`).join('')}
+              </select>
+              ${wallets.length === 0 ? '<p class="text-xs text-red-500 mt-1">Crea una billetera primero</p>' : ''}
+            </div>
+            <button onclick="doBuyStock()" class="btn w-full justify-center py-3 text-sm bg-accent text-white hover:bg-accent-dark"><i class="fa-solid fa-cart-shopping"></i> Comprar Stock</button>
+          </div>
+        </div>
+        <!-- Recent Purchases -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Compras Recientes</h3>
+          <div class="max-h-[400px] overflow-y-auto space-y-2">
+            ${(() => {
+              const purchases = DB.get('purchases').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15);
+              if (purchases.length === 0) return '<p class="text-sm text-muted text-center py-4">Sin compras</p>';
+              return purchases.map(p => `
+                <div class="flex items-center gap-3 p-3 rounded-xl bg-amber-50">
+                  <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-box text-amber-600 text-xs"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">${p.productName}</p>
+                    <p class="text-xs text-muted">${p.quantity} uds × ${fmtCur(p.unitCost)}</p>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="text-sm font-bold text-amber-700">${fmtCur(p.totalCost)}</p>
+                    <p class="text-xs text-muted">${fmtDateTime(p.date)}</p>
+                  </div>
+                </div>`).join('');
+            })()}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function onBuyProductChange() {
+  const sel = $('#buyProduct');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.cost) {
+    $('#buyUnitCost').value = opt.dataset.cost;
+    onBuyQtyChange();
+  }
+}
+
+function onBuyQtyChange() {
+  const qty = parseFloat($('#buyQty').value) || 0;
+  const cost = parseFloat($('#buyUnitCost').value) || 0;
+  $('#buyTotal').textContent = fmtCur(qty * cost);
+}
+
+function doBuyStock() {
+  const productId = $('#buyProduct').value;
+  const qty = parseInt($('#buyQty').value) || 0;
+  const unitCost = parseFloat($('#buyUnitCost').value) || 0;
+  const walletId = $('#buyWallet').value;
+
+  if (!productId) { showToast('Selecciona un producto', 'warning'); return; }
+  if (qty <= 0) { showToast('Ingresa una cantidad válida', 'warning'); return; }
+  if (unitCost <= 0) { showToast('Ingresa un costo unitario válido', 'warning'); return; }
+  if (!walletId) { showToast('Selecciona una billetera', 'warning'); return; }
+
+  const totalCost = qty * unitCost;
+  const wallets = DB.get('wallets');
+  const wallet = wallets.find(w => w.id === walletId);
+  if (!wallet || wallet.balance < totalCost) { showToast('Saldo insuficiente en la billetera', 'error'); return; }
+
+  const products = DB.get('products');
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+
+  wallet.balance -= totalCost;
+  product.stock += qty;
+  DB.set('wallets', wallets);
+  DB.set('products', products);
+
+  const purchases = DB.get('purchases');
+  purchases.push({ id: genId(), productId, productName: product.name, quantity: qty, unitCost, totalCost, walletId, date: now() });
+  DB.set('purchases', purchases);
+
+  showToast(`Compra exitosa: +${qty} ${product.name}`);
+  renderPage(); updateBalance();
+}
+
+// ═══════════════════════════════════════════
+// 6. NEW SALE
+// ═══════════════════════════════════════════
+let saleCart = [];
+let saleWallet = '';
+let saleSearch = '';
+
+function renderNewSale(el) {
+  const products = DB.get('products');
+  const wallets = DB.get('wallets');
+  const comps = DB.get('compositions');
+  const simpleProducts = products.filter(p => p.type === 'simple');
+  const filtered = simpleProducts.filter(p => !saleSearch || p.name.toLowerCase().includes(saleSearch.toLowerCase()) || p.sku.toLowerCase().includes(saleSearch.toLowerCase()));
+
+  const cartTotal = saleCart.reduce((s, i) => s + i.sellingPrice * i.qty, 0);
+  const cartCost = saleCart.reduce((s, i) => s + i.costPrice * i.qty, 0);
+  const cartProfit = cartTotal - cartCost;
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <h2 class="font-heading font-semibold text-lg text-gray-900">Nueva Venta</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <!-- Products Grid -->
+        <div class="lg:col-span-3 space-y-4">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            <input type="text" placeholder="Buscar producto..." value="${saleSearch}" oninput="saleSearch=this.value;renderPage()" class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto">
+            ${filtered.map(p => {
+              const compCount = comps.filter(c => c.parentId === p.id).length;
+              const inCart = saleCart.find(i => i.productId === p.id);
+              return `<div class="fade-up bg-white rounded-xl border ${inCart ? 'border-amber-300 bg-amber-50' : 'border-gray-100'} shadow-sm p-4 card-hover cursor-pointer" onclick="addToCart('${p.id}')">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-medium text-sm text-gray-900 truncate">${p.name}</h4>
+                    <p class="text-xs text-muted">${p.sku}</p>
+                  </div>
+                  ${inCart ? '<span class="badge bg-amber-100 text-amber-700">En carrito</span>' : ''}
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-lg font-bold text-accent-dark">${fmtCur(p.sellingPrice)}</span>
+                  ${compCount > 0 ? '<span class="badge bg-purple-100 text-purple-700">Compuesto</span>' : ''}
+                </div>
+                <p class="text-xs text-muted mt-1">Stock: <span class="${p.stock <= p.lowStockThreshold ? 'text-red-600 font-semibold' : ''}">${p.stock}</span></p>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Cart -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
+            <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-cart-shopping text-accent mr-2"></i>Carrito (${saleCart.length})</h3>
+            <div class="max-h-60 overflow-y-auto space-y-3 mb-4">
+              ${saleCart.length === 0 ? '<p class="text-sm text-muted text-center py-4">Carrito vacío</p>' :
+                saleCart.map((item, idx) => {
+                  const prod = products.find(p => p.id === item.productId);
+                  const itemComps = comps.filter(c => c.parentId === item.productId);
+                  const compText = itemComps.map(c => {
+                    const comp = products.find(p => p.id === c.componentId);
+                    return comp ? `${comp.name} ×${c.quantity * item.qty}` : '';
+                  }).filter(Boolean).join(', ');
+                  return `<div class="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                      <p class="text-sm font-medium text-gray-900 truncate flex-1">${item.productName}</p>
+                      <button onclick="removeFromCart(${idx})" class="w-6 h-6 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 text-xs flex-shrink-0 ml-2"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    ${compText ? `<div class="mb-2 p-2 rounded-lg bg-purple-50 border border-purple-100"><p class="text-xs text-purple-700"><i class="fa-solid fa-puzzle-piece mr-1"></i>Producto compuesto: ${compText}</p></div>` : ''}
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="text-xs text-muted block mb-1">Precio</label>
+                        <input type="number" min="0" step="0.01" value="${item.sellingPrice}" onchange="updateCartItem(${idx},'sellingPrice',this.value)" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs">
+                      </div>
+                      <div>
+                        <label class="text-xs text-muted block mb-1">Cantidad</label>
+                        <input type="number" min="1" value="${item.qty}" onchange="updateCartItem(${idx},'qty',this.value)" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs">
+                      </div>
+                    </div>
+                    <p class="text-xs text-right text-muted mt-1">Subtotal: <span class="font-semibold text-gray-900">${fmtCur(item.sellingPrice * item.qty)}</span></p>
+                  </div>`;
+                }).join('')}
+            </div>
+            <div class="space-y-2 border-t border-gray-100 pt-4 mb-4">
+              <div class="flex justify-between text-sm"><span class="text-muted">Total</span><span class="font-semibold">${fmtCur(cartTotal)}</span></div>
+              <div class="flex justify-between text-sm"><span class="text-muted">Costo</span><span class="font-semibold">${fmtCur(cartCost)}</span></div>
+              <div class="flex justify-between text-sm"><span class="text-muted">Ganancia</span><span class="font-semibold text-emerald-600">${fmtCur(cartProfit)}</span></div>
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Billetera destino</label>
+              <select id="saleWallet" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+                <option value="">Seleccionar...</option>
+                ${wallets.map(w => `<option value="${w.id}" ${saleWallet === w.id ? 'selected' : ''}>${w.name} (${fmtCur(w.balance)})</option>`).join('')}
+              </select>
+            </div>
+            <button onclick="completeSale()" class="btn w-full justify-center py-3 text-sm ${saleCart.length === 0 || !$('#saleWallet')?.value ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}" ${saleCart.length === 0 ? 'disabled' : ''}>
+              <i class="fa-solid fa-check-circle"></i> Completar Venta
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function addToCart(productId) {
+  const products = DB.get('products');
+  const p = products.find(x => x.id === productId);
+  if (!p) return;
+  const existing = saleCart.find(i => i.productId === productId);
+  if (existing) { existing.qty++; }
+  else { saleCart.push({ productId, productName: p.name, productSku: p.sku, costPrice: p.costPrice, sellingPrice: p.sellingPrice, qty: 1 }); }
+  renderPage();
+}
+
+function removeFromCart(idx) {
+  saleCart.splice(idx, 1);
+  renderPage();
+}
+
+function updateCartItem(idx, field, value) {
+  saleCart[idx][field] = parseFloat(value) || 0;
+  if (saleCart[idx].qty <= 0) saleCart[idx].qty = 1;
+  renderPage();
+}
+
+function completeSale() {
+  const walletId = $('#saleWallet') ? $('#saleWallet').value : '';
+  if (saleCart.length === 0) { showToast('El carrito está vacío', 'warning'); return; }
+  if (!walletId) { showToast('Selecciona una billetera destino', 'warning'); return; }
+
+  const products = DB.get('products');
+  const comps = DB.get('compositions');
+
+  // Validate stock
+  const errors = [];
+  for (const item of saleCart) {
+    const product = products.find(p => p.id === item.productId);
+    if (!product) continue;
+    if (product.stock < item.qty) {
+      errors.push(`Stock insuficiente de "${product.name}". Requerido: ${item.qty}, Disponible: ${product.stock}`);
+      continue;
+    }
+    // Check component stock for complex products
+    const itemComps = comps.filter(c => c.parentId === item.productId);
+    for (const comp of itemComps) {
+      const compProduct = products.find(p => p.id === comp.componentId);
+      if (!compProduct) continue;
+      const needed = comp.quantity * item.qty;
+      if (compProduct.stock < needed) {
+        errors.push(`No hay suficiente stock de "${compProduct.name}" (insumo). Requerido: ${needed}, Disponible: ${compProduct.stock}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    openModal(`
+      <div class="p-6">
+        <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation text-2xl text-red-500"></i></div>
+        <h3 class="font-heading font-semibold text-lg mb-3 text-center">Error de Stock</h3>
+        <div class="space-y-2 max-h-60 overflow-y-auto mb-4">
+          ${errors.map(e => `<p class="text-sm text-red-700 bg-red-50 p-3 rounded-lg">${e}</p>`).join('')}
+        </div>
+        <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Entendido</button>
+      </div>`);
+    return;
+  }
+
+  // Process sale
+  const wallets = DB.get('wallets');
+  const wallet = wallets.find(w => w.id === walletId);
+  const total = saleCart.reduce((s, i) => s + i.sellingPrice * i.qty, 0);
+  const totalCost = saleCart.reduce((s, i) => s + i.costPrice * i.qty, 0);
+
+  wallet.balance += total;
+  DB.set('wallets', wallets);
+
+  // Deduct stock
+  for (const item of saleCart) {
+    const product = products.find(p => p.id === item.productId);
+    if (product) product.stock -= item.qty;
+
+    // Deduct component stock
+    const itemComps = comps.filter(c => c.parentId === item.productId);
+    for (const comp of itemComps) {
+      const compProduct = products.find(p => p.id === comp.componentId);
+      if (compProduct) compProduct.stock -= comp.quantity * item.qty;
+    }
+  }
+  DB.set('products', products);
+
+  // Create sale record
+  const sales = DB.get('sales');
+  sales.push({
+    id: genId(),
+    items: saleCart.map(i => ({ productId: i.productId, productName: i.productName, productSku: i.productSku, costPrice: i.costPrice, sellingPrice: i.sellingPrice, qty: i.qty })),
+    total, totalCost, walletId, date: now()
+  });
+  DB.set('sales', sales);
+
+  showToast(`Venta completada: ${fmtCur(total)} · Ganancia: ${fmtCur(total - totalCost)}`);
+  saleCart = [];
+  saleWallet = '';
+  renderPage(); updateBalance();
+}
+
+// ═══════════════════════════════════════════
+// 7. NEW EXPENSE
+// ═══════════════════════════════════════════
+const expenseCategories = [
+  { value: 'insumos', label: 'Insumos', icon: 'fa-box', color: 'bg-orange-100 text-orange-700' },
+  { value: 'transporte', label: 'Transporte', icon: 'fa-truck', color: 'bg-blue-100 text-blue-700' },
+  { value: 'servicios', label: 'Servicios', icon: 'fa-wrench', color: 'bg-purple-100 text-purple-700' },
+  { value: 'alquiler', label: 'Alquiler', icon: 'fa-building', color: 'bg-cyan-100 text-cyan-700' },
+  { value: 'marketing', label: 'Marketing', icon: 'fa-bullhorn', color: 'bg-pink-100 text-pink-700' },
+  { value: 'impuestos', label: 'Impuestos', icon: 'fa-file-invoice-dollar', color: 'bg-red-100 text-red-700' },
+  { value: 'otros', label: 'Otros', icon: 'fa-ellipsis', color: 'bg-gray-100 text-gray-700' },
+];
+
+function renderNewExpense(el) {
+  const wallets = DB.get('wallets');
+  const expenses = DB.get('expenses').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <h2 class="font-heading font-semibold text-lg text-gray-900">Nuevo Gasto</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Registrar Gasto</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+              <select id="expCategory" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+                ${expenseCategories.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+              <input id="expDesc" type="text" placeholder="Descripción del gasto" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+              <input id="expAmount" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Pagar con</label>
+              <select id="expWallet" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+                ${wallets.map(w => `<option value="${w.id}">${w.name} (${fmtCur(w.balance)})</option>`).join('')}
+              </select>
+            </div>
+            <button onclick="doExpense()" class="btn w-full justify-center py-3 text-sm bg-danger text-white hover:bg-red-600"><i class="fa-solid fa-receipt"></i> Registrar Gasto</button>
+          </div>
+        </div>
+        <!-- Recent Expenses -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Gastos Recientes</h3>
+          <div class="max-h-[400px] overflow-y-auto space-y-2">
+            ${expenses.length === 0 ? '<p class="text-sm text-muted text-center py-4">Sin gastos</p>' :
+              expenses.map(e => {
+                const cat = expenseCategories.find(c => c.value === e.category) || expenseCategories[6];
+                return `<div class="flex items-center gap-3 p-3 rounded-xl bg-red-50">
+                  <div class="w-8 h-8 rounded-lg ${cat.color} flex items-center justify-center flex-shrink-0"><i class="fa-solid ${cat.icon} text-xs"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">${e.description}</p>
+                    <p class="text-xs text-muted">${cat.label} · ${fmtDateTime(e.date)}</p>
+                  </div>
+                  <span class="text-sm font-bold text-red-600 flex-shrink-0">${fmtCur(e.amount)}</span>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function doExpense() {
+  const category = $('#expCategory').value;
+  const description = $('#expDesc').value.trim();
+  const amount = parseFloat($('#expAmount').value) || 0;
+  const walletId = $('#expWallet').value;
+
+  if (!description) { showToast('Ingresa una descripción', 'warning'); return; }
+  if (amount <= 0) { showToast('Ingresa un monto válido', 'warning'); return; }
+  if (!walletId) { showToast('Selecciona una billetera', 'warning'); return; }
+
+  const wallets = DB.get('wallets');
+  const wallet = wallets.find(w => w.id === walletId);
+  if (!wallet || wallet.balance < amount) { showToast('Saldo insuficiente', 'error'); return; }
+
+  wallet.balance -= amount;
+  DB.set('wallets', wallets);
+
+  const expenses = DB.get('expenses');
+  expenses.push({ id: genId(), category, description, amount, walletId, date: now() });
+  DB.set('expenses', expenses);
+
+  showToast('Gasto registrado: ' + fmtCur(amount));
+  renderPage(); updateBalance();
+}
+
+// ═══════════════════════════════════════════
+// 8. HISTORY
+// ═══════════════════════════════════════════
+let historyFilter = 'all';
+
+function renderHistory(el) {
+  const sales = DB.get('sales');
+  const expenses = DB.get('expenses');
+  const purchases = DB.get('purchases');
+
+  let allTx = [];
+  if (historyFilter === 'all' || historyFilter === 'sales') {
+    sales.forEach(s => allTx.push({ ...s, _type: 'sale', _date: s.date, _amount: s.total, _id: s.id }));
+  }
+  if (historyFilter === 'all' || historyFilter === 'expenses') {
+    expenses.forEach(e => allTx.push({ ...e, _type: 'expense', _date: e.date, _amount: e.amount, _id: e.id }));
+  }
+  if (historyFilter === 'all' || historyFilter === 'purchases') {
+    purchases.forEach(p => allTx.push({ ...p, _type: 'purchase', _date: p.date, _amount: p.totalCost, _id: p.id }));
+  }
+  allTx.sort((a, b) => b._date.localeCompare(a._date));
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="font-heading font-semibold text-lg text-gray-900">Historial de Transacciones</h2>
+      </div>
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-2">
+        ${[
+          { value: 'all', label: 'Todos', icon: 'fa-list' },
+          { value: 'sales', label: 'Ventas', icon: 'fa-cart-shopping' },
+          { value: 'expenses', label: 'Gastos', icon: 'fa-receipt' },
+          { value: 'purchases', label: 'Compras', icon: 'fa-box' }
+        ].map(f => `<button onclick="historyFilter='${f.value}';renderPage()" class="btn px-4 py-2 text-sm ${historyFilter === f.value ? 'bg-accent text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}"><i class="fa-solid ${f.icon}"></i> ${f.label}</button>`).join('')}
+      </div>
+      <!-- List -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="max-h-[600px] overflow-y-auto">
+          ${allTx.length === 0 ? '<div class="p-8 text-center text-muted text-sm">Sin transacciones</div>' :
+            allTx.map(tx => {
+              const colors = { sale: 'border-l-emerald-500', expense: 'border-l-red-500', purchase: 'border-l-amber-500' };
+              const bgColors = { sale: 'bg-emerald-50', expense: 'bg-red-50', purchase: 'bg-amber-50' };
+              const icons = { sale: 'fa-cart-shopping text-emerald-500', expense: 'fa-receipt text-red-500', purchase: 'fa-box text-amber-500' };
+              const labels = { sale: 'Venta', expense: 'Gasto', purchase: 'Compra de Stock' };
+              let desc = '';
+              if (tx._type === 'sale') desc = tx.items ? tx.items.map(i => `${i.productName} ×${i.qty}`).join(', ') : '';
+              else if (tx._type === 'expense') desc = tx.description || '';
+              else desc = `${tx.productName} ×${tx.quantity}`;
+
+              return `<div class="flex items-center gap-4 p-4 border-l-4 ${colors[tx._type]} border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onclick="showTxDetail('${tx._type}','${tx._id}')">
+                <div class="w-10 h-10 rounded-xl ${bgColors[tx._type]} flex items-center justify-center flex-shrink-0"><i class="fa-solid ${icons[tx._type]}"></i></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900">${labels[tx._type]}</p>
+                  <p class="text-xs text-muted truncate">${desc}</p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <p class="text-sm font-bold ${tx._type === 'sale' ? 'text-emerald-600' : tx._type === 'expense' ? 'text-red-600' : 'text-amber-600'}">${tx._type === 'sale' ? '+' : '-'}${fmtCur(tx._amount)}</p>
+                  <p class="text-xs text-muted">${fmtDateTime(tx._date)}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-300 text-xs flex-shrink-0"></i>
+              </div>`;
+            }).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function showTxDetail(type, id) {
+  let html = '';
+  if (type === 'sale') {
+    const sale = DB.get('sales').find(s => s.id === id);
+    if (!sale) return;
+    html = `<div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-1">Detalle de Venta</h3>
+      <p class="text-sm text-muted mb-4">${fmtDateTime(sale.date)}</p>
+      <div class="space-y-2 mb-4">
+        ${sale.items.map(i => `<div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm">${i.productName} ×${i.qty}</span><span class="text-sm font-semibold">${fmtCur(i.sellingPrice * i.qty)}</span></div>`).join('')}
+      </div>
+      <div class="border-t border-gray-100 pt-3 space-y-1">
+        <div class="flex justify-between text-sm"><span class="text-muted">Total</span><span class="font-semibold">${fmtCur(sale.total)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-muted">Costo</span><span class="font-semibold">${fmtCur(sale.totalCost)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-muted">Ganancia</span><span class="font-semibold text-emerald-600">${fmtCur(sale.total - sale.totalCost)}</span></div>
+      </div>
+      <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 mt-4">Cerrar</button>
+    </div>`;
+  } else if (type === 'expense') {
+    const exp = DB.get('expenses').find(e => e.id === id);
+    if (!exp) return;
+    const cat = expenseCategories.find(c => c.value === exp.category) || expenseCategories[6];
+    html = `<div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-1">Detalle de Gasto</h3>
+      <p class="text-sm text-muted mb-4">${fmtDateTime(exp.date)}</p>
+      <div class="p-4 rounded-xl bg-gray-50 mb-4">
+        <div class="flex justify-between mb-2"><span class="text-sm text-muted">Categoría</span><span class="badge ${cat.color}">${cat.label}</span></div>
+        <div class="flex justify-between mb-2"><span class="text-sm text-muted">Descripción</span><span class="text-sm font-medium">${exp.description}</span></div>
+        <div class="flex justify-between"><span class="text-sm text-muted">Monto</span><span class="text-sm font-bold text-red-600">${fmtCur(exp.amount)}</span></div>
+      </div>
+      <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+    </div>`;
+  } else if (type === 'purchase') {
+    const pur = DB.get('purchases').find(p => p.id === id);
+    if (!pur) return;
+    html = `<div class="p-6">
+      <h3 class="font-heading font-semibold text-lg mb-1">Detalle de Compra</h3>
+      <p class="text-sm text-muted mb-4">${fmtDateTime(pur.date)}</p>
+      <div class="p-4 rounded-xl bg-gray-50 mb-4">
+        <div class="flex justify-between mb-2"><span class="text-sm text-muted">Producto</span><span class="text-sm font-medium">${pur.productName}</span></div>
+        <div class="flex justify-between mb-2"><span class="text-sm text-muted">Cantidad</span><span class="text-sm">${pur.quantity}</span></div>
+        <div class="flex justify-between mb-2"><span class="text-sm text-muted">Costo Unitario</span><span class="text-sm">${fmtCur(pur.unitCost)}</span></div>
+        <div class="flex justify-between"><span class="text-sm text-muted">Total</span><span class="text-sm font-bold text-amber-600">${fmtCur(pur.totalCost)}</span></div>
+      </div>
+      <button onclick="closeModal()" class="btn w-full justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+    </div>`;
+  }
+  if (html) openModal(html, 'max-w-md');
+}
+
+// ═══════════════════════════════════════════
+// 9. ANALYTICS
+// ═══════════════════════════════════════════
+function renderAnalytics(el) {
+  const sales = DB.get('sales');
+  const expenses = DB.get('expenses');
+  const cm = currentMonth();
+  const pm = (() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); })();
+
+  const cmSales = sales.filter(s => s.date.startsWith(cm));
+  const pmSales = sales.filter(s => s.date.startsWith(pm));
+  const cmExp = expenses.filter(e => e.date.startsWith(cm));
+  const pmExp = expenses.filter(e => e.date.startsWith(pm));
+
+  const cmRevenue = cmSales.reduce((s, x) => s + x.total, 0);
+  const pmRevenue = pmSales.reduce((s, x) => s + x.total, 0);
+  const cmProfit = cmSales.reduce((s, x) => s + x.total - x.totalCost, 0);
+  const pmProfit = pmSales.reduce((s, x) => s + x.total - x.totalCost, 0);
+  const cmExpTotal = cmExp.reduce((s, x) => s + x.amount, 0);
+  const pmExpTotal = pmExp.reduce((s, x) => s + x.amount, 0);
+  const cmTxCount = cmSales.length + cmExp.length;
+
+  const pctChange = (curr, prev) => {
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return ((curr - prev) / prev * 100).toFixed(1);
+  };
+
+  const kpis = [
+    { label: 'Ingresos del Mes', value: fmtCur(cmRevenue), change: pctChange(cmRevenue, pmRevenue), icon: 'fa-arrow-trend-up', color: 'text-emerald-600' },
+    { label: 'Ganancia del Mes', value: fmtCur(cmProfit), change: pctChange(cmProfit, pmProfit), icon: 'fa-sack-dollar', color: 'text-amber-600' },
+    { label: 'Gastos del Mes', value: fmtCur(cmExpTotal), change: pctChange(cmExpTotal, pmExpTotal), icon: 'fa-arrow-trend-down', color: 'text-red-600' },
+    { label: 'Transacciones', value: cmTxCount.toString(), change: '', icon: 'fa-receipt', color: 'text-blue-600' },
+  ];
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <h2 class="font-heading font-semibold text-lg text-gray-900">Análisis</h2>
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        ${kpis.map((k, i) => `
+          <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-5 card-hover" style="animation-delay:${i * 0.05}s">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-muted font-medium">${k.label}</span>
+              <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center"><i class="fa-solid ${k.icon} ${k.color}"></i></div>
+            </div>
+            <p class="text-2xl font-bold font-heading text-gray-900">${k.value}</p>
+            ${k.change !== '' ? `<p class="text-xs mt-1 ${parseFloat(k.change) >= 0 ? 'text-emerald-600' : 'text-red-600'}"><i class="fa-solid ${parseFloat(k.change) >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${Math.abs(parseFloat(k.change))}% vs mes anterior</p>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      <!-- Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Tendencia 30 Días</h3>
+          <div style="height:280px"><canvas id="analyticsTrend"></canvas></div>
+        </div>
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Gastos por Categoría</h3>
+          <div style="height:280px"><canvas id="analyticsCat"></canvas></div>
+        </div>
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Top Productos por Ingresos</h3>
+          <div style="height:280px"><canvas id="analyticsTop"></canvas></div>
+        </div>
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4">Balance Diario</h3>
+          <div style="height:280px"><canvas id="analyticsDaily"></canvas></div>
+        </div>
+      </div>
+    </div>`;
+
+  // Build charts after DOM is ready
+  setTimeout(() => buildAnalyticsCharts(), 50);
+}
+
+function buildAnalyticsCharts() {
+  const sales = DB.get('sales');
+  const expenses = DB.get('expenses');
+
+  // 1. 30-day trend
+  {
+    const labels = [], salesData = [], profitData = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      labels.push(d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }));
+      const daySales = sales.filter(s => s.date.startsWith(ds));
+      const dayRev = daySales.reduce((s, x) => s + x.total, 0);
+      const dayProfit = daySales.reduce((s, x) => s + x.total - x.totalCost, 0);
+      salesData.push(dayRev);
+      profitData.push(dayProfit);
+    }
+    const ctx = document.getElementById('analyticsTrend');
+    if (ctx) charts['trend'] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Ventas', data: salesData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.4, pointRadius: 0 },
+          { label: 'Ganancia', data: profitData, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointRadius: 0 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } }, x: { display: false } } }
+    });
+  }
+
+  // 2. Expense categories
+  {
+    const catTotals = {};
+    expenses.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
+    const labels = Object.keys(catTotals);
+    const data = Object.values(catTotals);
+    const colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#10b981', '#6b7280'];
+    const ctx = document.getElementById('analyticsCat');
+    if (ctx) charts['cat'] = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.map(l => { const c = expenseCategories.find(x => x.value === l); return c ? c.label : l; }),
+        datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true } } } }
+    });
+  }
+
+  // 3. Top products
+  {
+    const prodRev = {};
+    sales.forEach(s => {
+      s.items.forEach(i => { prodRev[i.productId] = (prodRev[i.productId] || 0) + i.sellingPrice * i.qty; });
+    });
+    const sorted = Object.entries(prodRev).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const products = DB.get('products');
+    const labels = sorted.map(([id]) => { const p = products.find(x => x.id === id); return p ? p.name : id; });
+    const data = sorted.map(([, v]) => v);
+    const ctx = document.getElementById('analyticsTop');
+    if (ctx) charts['top'] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 8 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { callback: v => '$' + v } } } }
+    });
+  }
+
+  // 4. Daily net balance (last 14 days)
+  {
+    const labels = [], data = [], bgColors = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      labels.push(d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }));
+      const dayRev = sales.filter(s => s.date.startsWith(ds)).reduce((s, x) => s + x.total, 0);
+      const dayExp = expenses.filter(e => e.date.startsWith(ds)).reduce((s, x) => s + x.amount, 0);
+      const net = dayRev - dayExp;
+      data.push(net);
+      bgColors.push(net >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)');
+    }
+    const ctx = document.getElementById('analyticsDaily');
+    if (ctx) charts['daily'] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Balance Neto', data, backgroundColor: bgColors, borderRadius: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => '$' + v } }, x: { grid: { display: false } } } }
+    });
+  }
+}
+
+// ═══════════════════════════════════════════
+// 10. SETTINGS
+// ═══════════════════════════════════════════
+function renderSettings(el) {
+  const session = getSession();
+  const products = DB.get('products');
+  const sales = DB.get('sales');
+  const expenses = DB.get('expenses');
+
+  el.innerHTML = `
+    <div class="space-y-6">
+      <h2 class="font-heading font-semibold text-lg text-gray-900">Configuración</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Profile -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-user text-accent mr-2"></i>Perfil de Usuario</h3>
+          <div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50">
+            <div class="w-14 h-14 rounded-2xl bg-accent text-white flex items-center justify-center text-xl font-bold font-heading">${(session?.username || 'U').toUpperCase().charAt(0)}</div>
+            <div>
+              <p class="font-medium text-gray-900">${session?.username || '—'}</p>
+              <p class="text-sm text-muted">Administrador</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-key text-accent mr-2"></i>Cambiar Contraseña</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña actual</label>
+              <input id="setCurrPass" type="password" placeholder="••••••" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
+              <input id="setNewPass" type="password" placeholder="••••••" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar nueva contraseña</label>
+              <input id="setConfPass" type="password" placeholder="••••••" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm">
+            </div>
+            <div id="setPassError" class="hidden text-danger text-sm bg-red-50 p-3 rounded-lg"></div>
+            <button onclick="changePassword()" class="btn w-full justify-center py-2.5 text-sm bg-accent text-white hover:bg-accent-dark">Cambiar Contraseña</button>
+          </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-gray-900 mb-4"><i class="fa-solid fa-circle-info text-accent mr-2"></i>Información del Sistema</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Versión</span><span class="text-sm font-medium">1.0.0</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Productos</span><span class="text-sm font-medium">${products.length}</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Ventas</span><span class="text-sm font-medium">${sales.length}</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Gastos</span><span class="text-sm font-medium">${expenses.length}</span></div>
+            <div class="flex justify-between p-3 rounded-xl bg-gray-50"><span class="text-sm text-muted">Zona Horaria</span><span class="text-sm font-medium">America/Bogota</span></div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="fade-up bg-white rounded-2xl border border-red-200 shadow-sm p-6">
+          <h3 class="font-heading font-semibold text-red-600 mb-4"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Zona de Peligro</h3>
+          <p class="text-sm text-muted mb-4">Eliminar todos los datos de la aplicación. Esta acción es irreversible.</p>
+          <button onclick="openClearDataModal()" class="btn w-full justify-center py-2.5 text-sm bg-red-600 text-white hover:bg-red-700"><i class="fa-solid fa-trash"></i> Borrar Todos los Datos</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function changePassword() {
+  const currPass = $('#setCurrPass').value;
+  const newPass = $('#setNewPass').value;
+  const confPass = $('#setConfPass').value;
+  const errEl = $('#setPassError');
+  errEl.classList.add('hidden');
+
+  if (!currPass || !newPass || !confPass) { errEl.textContent = 'Completa todos los campos.'; errEl.classList.remove('hidden'); return; }
+  if (newPass.length < 4) { errEl.textContent = 'La contraseña debe tener al menos 4 caracteres.'; errEl.classList.remove('hidden'); return; }
+  if (newPass !== confPass) { errEl.textContent = 'Las contraseñas no coinciden.'; errEl.classList.remove('hidden'); return; }
+
+  const session = getSession();
+  const users = DB.get('users');
+  const user = users.find(u => u.id === session.userId);
+  if (!user) return;
+
+  const hash = await hashPassword(currPass, user.salt);
+  if (hash !== user.passwordHash) { errEl.textContent = 'Contraseña actual incorrecta.'; errEl.classList.remove('hidden'); return; }
+
+  const newSalt = genSalt();
+  const newHash = await hashPassword(newPass, newSalt);
+  user.salt = newSalt;
+  user.passwordHash = newHash;
+  DB.set('users', users);
+
+  showToast('Contraseña actualizada correctamente');
+  $('#setCurrPass').value = '';
+  $('#setNewPass').value = '';
+  $('#setConfPass').value = '';
+}
+
+function openClearDataModal() {
+  openModal(`
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation text-2xl text-red-500"></i></div>
+      <h3 class="font-heading font-semibold text-lg mb-2">Borrar Todos los Datos</h3>
+      <p class="text-sm text-muted mb-6">Esta acción eliminará TODOS los datos de la aplicación: productos, ventas, gastos, billeteras y más. No se puede deshacer.</p>
+      <p class="text-sm font-medium text-red-600 mb-6">Escribe <strong>ELIMINAR</strong> para confirmar:</p>
+      <input id="clearConfirmInput" type="text" placeholder="ELIMINAR" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm mb-4 text-center">
+      <div class="flex gap-2">
+        <button onclick="closeModal()" class="btn flex-1 justify-center py-2.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+        <button onclick="confirmClearData()" class="btn flex-1 justify-center py-2.5 text-sm bg-danger text-white hover:bg-red-600">Borrar Todo</button>
+      </div>
+    </div>`, 'max-w-sm');
+}
+
+function confirmClearData() {
+  const input = $('#clearConfirmInput').value.trim();
+  if (input !== 'ELIMINAR') { showToast('Escribe ELIMINAR para confirmar', 'warning'); return; }
+
+  // Clear all sw_ keys
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('sw_')) keysToRemove.push(key);
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  closeModal();
+  showToast('Todos los datos han sido eliminados');
+  doLogout();
+}
+
+// ═══════════════════════════════════════════
+// APP INIT
+// ═══════════════════════════════════════════
+async function showApp() {
+  $('#loginScreen').classList.add('hidden');
+  $('#appShell').classList.remove('hidden');
+  const session = getSession();
+  if (session) $('#sidebarUser').textContent = session.username;
+  buildNav();
+  updateHeader();
+  renderPage();
+}
+
+async function init() {
+  await seedData();
+  const session = getSession();
+  if (session) {
+    showApp();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
